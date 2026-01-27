@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clawdbot Security Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0a0a0f;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid #ff3366;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            color: #ff3366;
+            text-shadow: 0 0 10px #ff3366;
+            animation: flicker 2s infinite;
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            padding: 1.5rem;
+            background: #111;
+            border-bottom: 1px solid #333;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .stat-value.danger { color: #ff3366; }
+        .stat-value.warning { color: #ffaa00; }
+        .stat-value.safe { color: #00ff88; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.2);
+        }
+        
+        .card.high-risk {
+            border-color: #ff3366;
+            animation: pulse-border 2s infinite;
+        }
+        
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 10px #ff3366; }
+            50% { box-shadow: 0 0 25px #ff3366; }
+        }
+        
+        .bomb {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 2rem;
+            animation: tick 0.5s infinite;
+        }
+        
+        @keyframes tick {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        
+        .ip {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        
+        .location {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .risk-meter {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .risk-fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+        
+        .risk-fill.high { background: linear-gradient(90deg, #ff3366, #ff0000); }
+        .risk-fill.medium { background: linear-gradient(90deg, #ffaa00, #ff6600); }
+        .risk-fill.low { background: linear-gradient(90deg, #00ff88, #00cc66); }
+        
+        .vulns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .vuln-tag {
+            background: #ff3366;
+            color: #fff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #ff3366;
+            color: #fff;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #00ff88;
+        }
+        
+        .warning-banner {
+            background: #ff3366;
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="warning-banner">⚠️ SECURITY ALERT: Exposed installations detected ⚠️</div>
+    
+    <div class="header">
+        <h1>💣 CLAWDBOT SECURITY SCANNER 💣</h1>
+        <p>Detecting accessible installations worldwide</p>
+    </div>
+    
+    <div class="stats-bar">
+        <div class="stat">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div>Total Found</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value danger">{{ stats.high_risk }}</div>
+            <div>High Risk</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value warning">{{ "%.1f"|format(stats.avg_risk) }}</div>
+            <div>Avg Risk Score</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value safe">{{ stats.countries|length }}</div>
+            <div>Countries</div>
+        </div>
+    </div>
+    
+    <div class="grid">
+        {% for result in results %}
+        <div class="card {% if result.risk_score > 70 %}high-risk{% endif %}">
+            <div class="bomb">💣</div>
+            <div class="ip">🌐 {{ result.ip }}:{{ result.port }}</div>
+            <div class="location">📍 {{ result.location.city }}, {{ result.location.country_name }}</div>
+            
+            <div class="risk-meter">
+                <div class="risk-fill {% if result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}" 
+                     style="width: {{ result.risk_score }}%"></div>
+            </div>
+            
+            <div>Risk Score: {{ result.risk_score }}/100</div>
+            
+            <div class="vulns">
+                {% for vuln in result.vulns %}
+                <span class="vuln-tag">{{ vuln }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="terminal">
+                <div>> Detected: {{ result.ip }}:{{ result.port }}</div>
+                <div>> Version: Unknown</div>
+                <div>> Status: EXPOSED 🚨</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <button class="refresh-btn" onclick="location.reload()">
+        🔄 SCAN AGAIN
+    </button>
+    
+    <script>
+        // Auto-refresh every 30 seconds
+        setTimeout(() => location.reload(), 30000);
+        
+        // Add some dynamic effects
+        document.querySelectorAll('.bomb').forEach(bomb => {
+            setInterval(() => {
+                bomb.style.transform = bomb.style.transform === 'scale(1.2)' 
+                    ? 'scale(1)' : 'scale(1.2)';
+            }, 500);
+        });
+    </script>
+</body>
+</html>
