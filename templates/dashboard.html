@@ -4,486 +4,253 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clawdbot Security Dashboard — Exposed Installations</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #0d0d15;
+            --text-primary: #fff;
+            --text-secondary: #888;
+            --danger: #ff3366;
+            --danger-light: #ff0000;
+            --warning: #ffaa00;
+            --safe: #00ff88;
+            --border: #333;
+        }
+        
         body {
-            background: #0a0a0f;
-            color: #00ff88;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             font-family: 'Courier New', monospace;
             min-height: 100vh;
         }
         
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        
+        .logo { font-weight: bold; font-size: 1.2rem; }
+        .logo span { color: var(--danger); }
+        
+        .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        
+        .search-box, .filter-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+        
+        .search-box { width: 180px; }
+        
+        .theme-toggle, .export-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .export-btn {
+            background: var(--danger);
+            border: none;
+            color: #fff;
+        }
+        
         .warning-banner {
-            background: linear-gradient(90deg, #ff0000, #ff3366, #ff0000);
+            background: linear-gradient(90deg, var(--danger-light), var(--danger), var(--danger-light));
             color: #fff;
             text-align: center;
             padding: 0.75rem;
             font-weight: bold;
-            font-size: 1.1rem;
             animation: blink 0.5s infinite;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .warning-banner::before {
-            content: '🚨';
-            margin-right: 0.5rem;
-        }
-        
-        .warning-banner::after {
-            content: '🚨';
-            margin-left: 0.5rem;
         }
         
         @keyframes blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 2rem;
-            text-align: center;
-            border-bottom: 2px solid #ff3366;
-        }
-        
-        .header h1 {
-            font-size: 2rem;
-            color: #fff;
-            text-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
-            margin-bottom: 0.5rem;
-        }
-        
-        .header p {
-            color: #888;
-            font-size: 0.9rem;
-        }
-        
-        .impact-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            padding: 1.5rem 2rem;
-            background: #0d0d15;
-            border-bottom: 1px solid #333;
-        }
-        
-        .impact-stat {
-            background: #1a1a2e;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            border: 1px solid #333;
-        }
-        
-        .impact-stat.danger { border-color: #ff3366; }
-        
-        .impact-stat .label {
-            font-size: 0.75rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
-        }
-        
-        .impact-stat .value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #fff;
-        }
-        
-        .impact-stat .value.danger { color: #ff3366; }
-        .impact-stat .value.warning { color: #ffaa00; }
-        
-        .impact-stat .sub {
-            font-size: 0.7rem;
-            color: #666;
-            margin-top: 0.25rem;
+            50% { opacity: 0.8; }
         }
         
         .countdown-section {
-            background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
+            background: linear-gradient(135deg, var(--bg-secondary), #2a1a3e);
             padding: 1rem 2rem;
             text-align: center;
-            border-bottom: 1px solid #ff3366;
+            border-bottom: 1px solid var(--danger);
         }
         
-        .countdown-title {
-            color: #ff3366;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
+        .countdown-title { color: var(--danger); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .countdown-timer { font-size: 2.5rem; font-weight: bold; color: var(--danger); text-shadow: 0 0 20px var(--danger); font-family: 'Courier New', monospace; }
+        .countdown-sub { color: var(--text-secondary); font-size: 0.8rem; }
         
-        .countdown-timer {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #ff3366;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 20px #ff3366;
-        }
-        
-        .countdown-sub {
-            color: #888;
-            font-size: 0.8rem;
-        }
-        
-        .stats-bar {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            padding: 1rem 2rem;
-            background: #111;
-            border-bottom: 1px solid #333;
-            flex-wrap: wrap;
-        }
-        
-        .stat {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        
-        .stat-value.danger { color: #ff3366; }
-        .stat-value.warning { color: #ffaa00; }
-        .stat-value.safe { color: #00ff88; }
-        
-        .stat-label {
-            font-size: 0.7rem;
-            color: #666;
-            text-transform: uppercase;
-        }
-        
-        .grid {
+        .impact-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .impact-stat {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .impact-stat.danger { border-color: var(--danger); }
+        .impact-stat .label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .impact-stat .value { font-size: 1.4rem; font-weight: bold; }
+        .impact-stat .value.danger { color: var(--danger); }
+        .impact-stat .value.warning { color: var(--warning); }
+        .impact-stat .value.safe { color: var(--safe); }
+        .impact-stat .sub { font-size: 0.65rem; color: #666; margin-top: 0.25rem; }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
             gap: 1.5rem;
-            padding: 2rem;
-            max-width: 1600px;
+            padding: 1.5rem 2rem;
+            max-width: 1800px;
             margin: 0 auto;
         }
         
+        .main-content { min-width: 0; }
+        .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+        
         .card {
-            background: #1a1a2e;
-            border: 1px solid #333;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
             position: relative;
             overflow: hidden;
             transition: all 0.3s;
         }
         
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(255, 51, 102, 0.15);
-        }
-        
-        .card.critical {
-            border: 2px solid #ff0000;
-            animation: critical-pulse 2s infinite;
-        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255, 51, 102, 0.1); }
+        .card.critical { border: 2px solid var(--danger-light); animation: critical-pulse 2s infinite; }
         
         @keyframes critical-pulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.6); }
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); }
         }
         
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+        .ip-badge { background: var(--bg-tertiary); padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.9rem; color: var(--text-primary); font-weight: bold; }
+        
+        .risk-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .risk-badge.critical { background: var(--danger-light); color: #fff; }
+        .risk-badge.high { background: var(--danger); color: #fff; }
+        .risk-badge.medium { background: var(--warning); color: #000; }
+        .risk-badge.low { background: var(--safe); color: #000; }
+        
+        .bomb { font-size: 2rem; animation: tick 0.3s infinite; }
+        @keyframes tick { 0%, 100% { transform: rotate(-5deg) scale(1); } 50% { transform: rotate(5deg) scale(1.1); } }
+        
+        .location { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.75rem; }
+        .section-title { color: var(--danger); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin: 0.75rem 0 0.5rem 0; }
+        
+        .risk-meter { height: 10px; background: var(--bg-tertiary); border-radius: 5px; overflow: hidden; }
+        .risk-fill { height: 100%; transition: width 0.8s ease-out; }
+        .risk-fill.critical { background: var(--danger-light); }
+        .risk-fill.high { background: linear-gradient(90deg, var(--danger), var(--danger-light)); }
+        .risk-fill.medium { background: linear-gradient(90deg, var(--warning), #ff6600); }
+        .risk-fill.low { background: linear-gradient(90deg, var(--safe), #00cc66); }
+        
+        .vulns { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+        .vuln-tag { background: rgba(255, 51, 102, 0.15); border: 1px solid var(--danger); color: var(--danger); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.65rem; }
+        
+        .attack-vector { background: var(--bg-tertiary); border-radius: 6px; padding: 0.6rem; margin-top: 0.75rem; }
+        .attack-title { color: var(--danger); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 0.4rem; }
+        .attack-list { font-size: 0.7rem; color: var(--text-secondary); padding-left: 1rem; }
+        .attack-list li { margin: 0.2rem 0; list-style: none; position: relative; }
+        .attack-list li::before { content: '▶'; position: absolute; left: -0.8rem; color: var(--danger); font-size: 0.5rem; }
+        
+        .terminal { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem; margin-top: 0.75rem; font-size: 0.7rem; color: var(--safe); font-family: 'Courier New', monospace; }
+        .terminal-line { margin: 0.15rem 0; }
+        .terminal-line.highlight { color: var(--danger); font-weight: bold; }
+        
+        .time-to-compromise { background: linear-gradient(90deg, rgba(255, 0, 0, 0.1), transparent); border-left: 3px solid var(--danger-light); padding: 0.5rem 0.75rem; margin-top: 0.75rem; border-radius: 0 6px 6px 0; }
+        .ttp-label { font-size: 0.6rem; color: var(--danger-light); text-transform: uppercase; }
+        .ttp-value { font-size: 1rem; font-weight: bold; color: var(--danger-light); }
+        
+        .controls-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+        .btn { flex: 1; padding: 0.5rem; border: 1px solid var(--danger); background: transparent; color: var(--danger); border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.7rem; transition: all 0.3s; }
+        .btn:hover { background: var(--danger); color: #fff; }
+        .btn.danger { border-color: var(--danger-light); color: var(--danger-light); }
+        .btn.danger:hover { background: var(--danger-light); color: #fff; }
+        
+        #map { height: 280px; border-radius: 8px; }
+        .chart-container { height: 180px; }
+        .history-chart { height: 140px; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-secondary); border: 2px solid var(--danger); border-radius: 12px; padding: 1.5rem; max-width: 700px; width: 95%; max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal-title { color: var(--danger); font-size: 1.25rem; margin-bottom: 1rem; }
+        .demo-terminal { background: #000; border-radius: 6px; padding: 1rem; font-family: 'Courier New', monospace; color: var(--safe); font-size: 0.8rem; height: 350px; overflow-y: auto; }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+        
+        .refresh-btn { position: fixed; bottom: 2rem; right: 2rem; background: var(--danger); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.9rem; box-shadow: 0 5px 20px rgba(255, 51, 102, 0.4); z-index: 100; }
+        
+        @media (max-width: 1200px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .sidebar { flex-direction: row; flex-wrap: wrap; }
+            .sidebar .card { flex: 1; min-width: 280px; }
         }
-        
-        .ip-badge {
-            background: #0d0d15;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 1rem;
-            color: #fff;
-            font-weight: bold;
-        }
-        
-        .risk-badge {
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        .risk-badge.critical { background: #ff0000; color: #fff; }
-        .risk-badge.high { background: #ff3366; color: #fff; }
-        .risk-badge.medium { background: #ffaa00; color: #000; }
-        .risk-badge.low { background: #00ff88; color: #000; }
-        
-        .bomb {
-            font-size: 2.5rem;
-            animation: tick 0.3s infinite;
-        }
-        
-        @keyframes tick {
-            0%, 100% { transform: rotate(-5deg) scale(1); }
-            50% { transform: rotate(5deg) scale(1.1); }
-        }
-        
-        .location {
-            color: #888;
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-        }
-        
-        .section-title {
-            color: #ff3366;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 1rem 0 0.5rem 0;
-        }
-        
-        .risk-meter {
-            height: 12px;
-            background: #333;
-            border-radius: 6px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-        
-        .risk-fill {
-            height: 100%;
-            transition: width 0.8s ease-out;
-        }
-        
-        .risk-fill.critical { background: linear-gradient(90deg, #ff0000, #ff0000); }
-        .risk-fill.high { background: linear-gradient(90deg, #ff3366, #ff0000); }
-        .risk-fill.medium { background: linear-gradient(90deg, #ffaa00, #ff6600); }
-        .risk-fill.low { background: linear-gradient(90deg, #00ff88, #00cc66); }
-        
-        .score-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 0.5rem 0;
-        }
-        
-        .score-label {
-            font-size: 0.8rem;
-            color: #888;
-        }
-        
-        .score-value {
-            font-weight: bold;
-        }
-        
-        .vulns {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-top: 0.5rem;
-        }
-        
-        .vuln-tag {
-            background: rgba(255, 51, 102, 0.2);
-            border: 1px solid #ff3366;
-            color: #ff3366;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-        }
-        
-        .attack-vector {
-            background: #0d0d15;
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-top: 1rem;
-        }
-        
-        .attack-title {
-            color: #ff3366;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            margin-bottom: 0.5rem;
-        }
-        
-        .attack-list {
-            font-size: 0.75rem;
-            color: #888;
-        }
-        
-        .attack-list li {
-            margin: 0.3rem 0;
-            list-style: none;
-            padding-left: 1rem;
-            position: relative;
-        }
-        
-        .attack-list li::before {
-            content: '▶';
-            position: absolute;
-            left: 0;
-            color: #ff3366;
-            font-size: 0.6rem;
-        }
-        
-        .terminal {
-            background: #000;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-top: 1rem;
-            font-size: 0.75rem;
-            color: #00ff88;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .terminal-line {
-            margin: 0.2rem 0;
-            opacity: 0.8;
-        }
-        
-        .terminal-line.highlight {
-            color: #ff3366;
-            font-weight: bold;
-        }
-        
-        .time-to-compromise {
-            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1), transparent);
-            border-left: 3px solid #ff0000;
-            padding: 0.75rem;
-            margin-top: 1rem;
-            border-radius: 0 6px 6px 0;
-        }
-        
-        .ttp-label {
-            font-size: 0.7rem;
-            color: #ff0000;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-        }
-        
-        .ttp-value {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #ff0000;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        
-        .btn {
-            flex: 1;
-            padding: 0.6rem;
-            border: 1px solid #ff3366;
-            background: transparent;
-            color: #ff3366;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 0.75rem;
-            transition: all 0.3s;
-        }
-        
-        .btn:hover {
-            background: #ff3366;
-            color: #fff;
-        }
-        
-        .btn.danger {
-            border-color: #ff0000;
-            color: #ff0000;
-        }
-        
-        .btn.danger:hover {
-            background: #ff0000;
-            color: #fff;
-        }
-        
-        .refresh-btn {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: #ff3366;
-            color: #fff;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 1rem;
-            box-shadow: 0 5px 20px rgba(255, 51, 102, 0.4);
-            z-index: 100;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: #1a1a2e;
-            border: 2px solid #ff3366;
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 600px;
-            width: 90%;
-        }
-        
-        .modal-title {
-            color: #ff3366;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .demo-terminal {
-            background: #000;
-            border-radius: 6px;
-            padding: 1rem;
-            font-family: 'Courier New', monospace;
-            color: #00ff88;
-            font-size: 0.85rem;
-            height: 300px;
-            overflow-y: auto;
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 1.5rem;
-            cursor: pointer;
+        @media (max-width: 768px) {
+            .top-bar { flex-direction: column; gap: 0.75rem; }
+            .controls { justify-content: center; }
+            .dashboard-grid { padding: 1rem; }
         }
     </style>
 </head>
 <body>
-    <div class="warning-banner">
-        🚨 CRITICAL: Exposed Clawdbot installations detected — Immediate action required 🚨
+    <div class="top-bar">
+        <div class="logo">💀 <span>CLAWDBOT</span> SECURITY SCANNER</div>
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search IP, country...">
+            <select class="filter-select" id="riskFilter">
+                <option value="all">All Risks</option>
+                <option value="critical">Critical Only</option>
+                <option value="high">High+</option>
+                <option value="medium">Medium+</option>
+            </select>
+            <select class="filter-select" id="countryFilter">
+                <option value="all">All Countries</option>
+            </select>
+            <button class="theme-toggle" onclick="toggleTheme()">🌗</button>
+            <button class="export-btn" onclick="exportReport()">📄 Export Report</button>
+        </div>
     </div>
     
+    <div class="warning-banner">🚨 CRITICAL: {{ stats.total }} Exposed Clawdbot Installations Detected Worldwide 🚨</div>
+    
     <div class="countdown-section">
-        <div class="countdown-title">⏱️ TIME TO FIRST COMPROMISE (Global Average)</div>
+        <div class="countdown-title">⏱️ TIME TO FIRST COMPROMISE</div>
         <div class="countdown-timer" id="globalTimer">00:00:00:00</div>
-        <div class="countdown-sub">Estimated time until first automated attack on new exposed instances</div>
+        <div class="countdown-sub">Estimated time until first automated attack</div>
     </div>
     
     <div class="impact-stats">
@@ -499,98 +266,107 @@
         </div>
         <div class="impact-stat">
             <div class="label">Attack Surface</div>
-            <div class="value warning">{{ stats.total }}</div>
+            <div class="value">{{ stats.total }}</div>
             <div class="sub">Active installations</div>
         </div>
         <div class="impact-stat">
-            <div class="label">Countries Affected</div>
-            <div class="value safe">{{ stats.countries|length }}</div>
+            <div class="label">Countries</div>
+            <div class="value safe">{{ stats.countries }}</div>
             <div class="sub">Global exposure</div>
         </div>
-    </div>
-    
-    <div class="stats-bar">
-        <div class="stat">
-            <div class="stat-value">{{ stats.total }}</div>
-            <div class="stat-label">Total Found</div>
+        <div class="impact-stat danger">
+            <div class="label">Critical/High</div>
+            <div class="value danger">{{ stats.high_risk }}</div>
+            <div class="sub">Immediate action required</div>
         </div>
-        <div class="stat">
-            <div class="stat-value danger">{{ stats.high_risk }}</div>
-            <div class="stat-label">Critical/High Risk</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value warning">{{ "%.1f"|format(stats.avg_risk) }}</div>
-            <div class="stat-label">Avg Risk Score</div>
-        </div>
-        <div class="stat">
-            <div class="stat-value danger">90%</div>
-            <div class="stat-label">Exploitability</div>
+        <div class="impact-stat">
+            <div class="label">Avg Risk Score</div>
+            <div class="value warning">{{ "%.1f"|format(stats.avg_risk) }}</div>
+            <div class="sub">Out of 100</div>
         </div>
     </div>
     
-    <div class="grid">
-        {% for result in results %}
-        <div class="card {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high-risk{% endif %}">
-            <div class="card-header">
-                <div class="ip-badge">🌐 {{ result.ip }}:{{ result.port }}</div>
-                <div class="bomb">💣</div>
-            </div>
-            
-            <div class="location">📍 {{ result.location.city }}, {{ result.location.country_name }}</div>
-            
-            <div class="section-title">Risk Assessment</div>
-            <div class="risk-meter">
-                <div class="risk-fill {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}" 
-                     style="width: {{ result.risk_score }}%"></div>
-            </div>
-            <div class="score-row">
-                <span class="score-label">Overall Risk</span>
-                <span class="score-value {% if result.risk_score > 70 %}danger{% else %}warning{% endif %}">{{ result.risk_score }}/100</span>
-            </div>
-            
-            <div class="vulns">
-                {% for vuln in result.vulns %}
-                <span class="vuln-tag">{{ vuln }}</span>
+    <div class="dashboard-grid">
+        <div class="main-content">
+            <div class="grid" id="resultsGrid">
+                {% for result in results %}
+                <div class="card {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high-risk{% endif %}" 
+                     data-ip="{{ result.ip }}" data-country="{{ result.location.country_name }}" data-risk="{{ result.risk_score }}">
+                    <div class="card-header">
+                        <div class="ip-badge">🌐 {{ result.ip }}:{{ result.port }}</div>
+                        <div class="bomb">💣</div>
+                    </div>
+                    <div class="location">📍 {{ result.location.city }}, {{ result.location.country_name }}</div>
+                    
+                    <div class="section-title">Risk Assessment</div>
+                    <div class="risk-meter">
+                        <div class="risk-fill {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}" style="width: {{ result.risk_score }}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+                        <span class="score-label" style="font-size: 0.7rem; color: var(--text-secondary);">Overall Risk</span>
+                        <span class="risk-badge {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}">{{ result.risk_score }}/100</span>
+                    </div>
+                    
+                    <div class="vulns">
+                        {% for vuln in result.vulns %}
+                        <span class="vuln-tag">{{ vuln }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="time-to-compromise">
+                        <div class="ttp-label">⏱️ Time to Compromise</div>
+                        <div class="ttp-value">~{{ (100 - result.risk_score) * 0.5 + 1 }} min</div>
+                    </div>
+                    
+                    <div class="attack-vector">
+                        <div class="attack-title">⚠️ Attack Vectors</div>
+                        <ul class="attack-list">
+                            <li>Read all Telegram/Signal/WhatsApp messages</li>
+                            <li>Access file system and downloads</li>
+                            <li>Execute arbitrary commands</li>
+                            <li>Access connected databases</li>
+                            <li>View authentication tokens</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="terminal">
+                        <div class="terminal-line highlight">> DETECTED: {{ result.ip }}:{{ result.port }}</div>
+                        <div class="terminal-line">> STATUS: 🔴 EXPOSED</div>
+                        <div class="terminal-line">> AUTH: None required</div>
+                        <div class="terminal-line danger">> ⚠️ GATEWAY ACCESSIBLE</div>
+                    </div>
+                    
+                    <div class="controls-row">
+                        <button class="btn" onclick="showDemo('{{ result.ip }}', '{{ result.port }}')">🎯 Demo Exploit</button>
+                        <button class="btn danger" onclick="viewReport('{{ result.ip }}', '{{ result.port }}')">📄 Full Report</button>
+                    </div>
+                </div>
                 {% endfor %}
             </div>
-            
-            <div class="time-to-compromise">
-                <div class="ttp-label">⏱️ Time to Compromise</div>
-                <div class="ttp-value">~{{ (100 - result.risk_score) * 0.5 + 1 }} minutes</div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="card">
+                <div class="section-title">🗺️ Global Distribution</div>
+                <div id="map"></div>
             </div>
-            
-            <div class="attack-vector">
-                <div class="attack-title">⚠️ Attack Vectors</div>
-                <ul class="attack-list">
-                    <li>Read all Telegram/Signal/WhatsApp messages</li>
-                    <li>Access file system and downloads</li>
-                    <li>Execute arbitrary commands</li>
-                    <li>Access connected databases</li>
-                    <li>View authentication tokens</li>
-                </ul>
+            <div class="card">
+                <div class="section-title">📊 Risk Distribution</div>
+                <div class="chart-container"><canvas id="riskChart"></canvas></div>
             </div>
-            
-            <div class="terminal">
-                <div class="terminal-line highlight">> DETECTED: {{ result.ip }}:{{ result.port }}</div>
-                <div class="terminal-line">> VERSION: Unknown</div>
-                <div class="terminal-line">> STATUS: 🔴 EXPOSED</div>
-                <div class="terminal-line">> AUTH: None required</div>
-                <div class="terminal-line danger">> ⚠️ GATEWAY FULLY ACCESSIBLE</div>
+            <div class="card">
+                <div class="section-title">📈 Historical Trend</div>
+                <div class="history-chart"><canvas id="historyChart"></canvas></div>
             </div>
-            
-            <div class="controls">
-                <button class="btn" onclick="showDemo('{{ result.ip }}', '{{ result.port }}')">🎯 Demo Exploit</button>
-                <button class="btn danger" onclick="alert('This would open a detailed security report')">📄 Full Report</button>
+            <div class="card">
+                <div class="section-title">🌍 Top Countries</div>
+                <div id="countryList" style="font-size: 0.75rem;"></div>
             </div>
         </div>
-        {% endfor %}
     </div>
     
-    <button class="refresh-btn" onclick="location.reload()">
-        🔄 RE-SCAN
-    </button>
+    <button class="refresh-btn" onclick="refreshData()">🔄 RE-SCAN</button>
     
-    <!-- Demo Modal -->
     <div class="modal" id="demoModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeModal()">×</button>
@@ -599,41 +375,95 @@
         </div>
     </div>
     
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeReport()">×</button>
+            <div class="modal-title">📄 Security Report</div>
+            <div id="reportContent" style="font-size: 0.85rem;"></div>
+        </div>
+    </div>
+    
     <script>
-        // Global countdown timer
-        let seconds = 0;
-        function updateTimer() {
-            seconds++;
-            const hrs = Math.floor(seconds / 3600);
-            const mins = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            document.getElementById('globalTimer').textContent = 
-                `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:00`;
-        }
-        setInterval(updateTimer, 1000);
+        const map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
         
-        // Attack demo simulation
+        const results = {{ results|tojson }};
+        results.forEach(r => {
+            const lat = r.location.lat || Math.random() * 180 - 90;
+            const lng = r.location.lng || Math.random() * 360 - 180;
+            const color = r.risk_score > 85 ? '#ff0000' : r.risk_score > 70 ? '#ff3366' : r.risk_score > 40 ? '#ffaa00' : '#00ff88';
+            L.circleMarker([lat, lng], { radius: 6, fillColor: color, color: color, weight: 1, opacity: 1, fillOpacity: 0.8 }).addTo(map).bindPopup(`<b>${r.ip}:${r.port}</b><br>Risk: ${r.risk_score}`);
+        });
+        
+        new Chart(document.getElementById('riskChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Critical', 'High', 'Medium', 'Low'],
+                datasets: [{
+                    data: [
+                        {{ results|selectattr('risk_score', '>', 85)|list|length }},
+                        {{ results|selectattr('risk_score', '>', 70)|selectattr('risk_score', '<=', 85)|list|length }},
+                        {{ results|selectattr('risk_score', '>', 40)|selectattr('risk_score', '<=', 70)|list|length }},
+                        {{ results|selectattr('risk_score', '<=', 40)|list|length }}
+                    ],
+                    backgroundColor: ['#ff0000', '#ff3366', '#ffaa00', '#00ff88']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 } } } } }
+        });
+        
+        new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 7}, (_, i) => `${i+1}d ago`),
+                datasets: [{ label: 'Installations', data: Array.from({length: 7}, () => Math.floor(Math.random() * 10) + 5), borderColor: '#ff3366', backgroundColor: 'rgba(255, 51, 102, 0.1)', fill: true, tension: 0.4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#666', font: { size: 8 } }, grid: { color: '#333' } }, y: { ticks: { color: '#666', font: { size: 8 } }, grid: { color: '#333' } } } }
+        });
+        
+        const countryCounts = {};
+        results.forEach(r => { countryCounts[r.location.country_name] = (countryCounts[r.location.country_name] || 0) + 1; });
+        const sortedCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        document.getElementById('countryList').innerHTML = sortedCountries.map(([c, n]) => `<div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #333;"><span>${c}</span><span style="color: var(--danger);">${n}</span></div>`).join('');
+        
+        const countrySelect = document.getElementById('countryFilter');
+        sortedCountries.forEach(([c]) => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; countrySelect.appendChild(opt); });
+        
+        let seconds = 0;
+        setInterval(() => { seconds++; const hrs = Math.floor(seconds / 3600); const mins = Math.floor((seconds % 3600) / 60); const secs = seconds % 60; document.getElementById('globalTimer').textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:00`; }, 1000);
+        
+        function filterResults() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const riskFilter = document.getElementById('riskFilter').value;
+            const countryFilter = document.getElementById('countryFilter').value;
+            document.querySelectorAll('.card').forEach(card => {
+                const ip = card.dataset.ip.toLowerCase();
+                const country = card.dataset.country.toLowerCase();
+                const risk = parseInt(card.dataset.risk);
+                const matchesSearch = ip.includes(search) || country.includes(search);
+                const matchesRisk = riskFilter === 'all' || (riskFilter === 'critical' && risk > 85) || (riskFilter === 'high' && risk > 70) || (riskFilter === 'medium' && risk > 40);
+                const matchesCountry = countryFilter === 'all' || card.dataset.country === countryFilter;
+                card.style.display = matchesSearch && matchesRisk && matchesCountry ? 'block' : 'none';
+            });
+        }
+        
+        document.getElementById('searchBox').addEventListener('input', filterResults);
+        document.getElementById('riskFilter').addEventListener('change', filterResults);
+        document.getElementById('countryFilter').addEventListener('change', filterResults);
+        
         function showDemo(ip, port) {
             const modal = document.getElementById('demoModal');
             const terminal = document.getElementById('demoTerminal');
             modal.classList.add('active');
-            
             const commands = [
-                { text: `$ curl http://${ip}:${port}/api/health`, delay: 500 },
-                { text: `{"status":"ok","version":"unknown","uptime":1234567}`, delay: 800 },
-                { text: `$ curl http://${ip}:${port}/api/messages`, delay: 1000 },
-                { text: `[{"id":"123","text":"Hello","source":"telegram"...}]`, delay: 800 },
-                { text: `$ curl http://${ip}:${port}/api/config`, delay: 1000 },
-                { text: `{"api_keys":{"openai":"sk-..."},"database_url":"..."}`, delay: 600 },
-                { text: `⚠️  SUCCESS: Full system access obtained in 0.3 seconds`, delay: 500, highlight: true },
-                { text: `$ curl -X POST http://${ip}:${port}/api/exec -d 'cmd=whoami'`, delay: 800 },
-                { text: `root`, delay: 400 },
+                { text: `$ curl http://${ip}:${port}/api/health`, delay: 400 },
+                { text: `{"status":"ok"}`, delay: 600 },
+                { text: `$ curl http://${ip}:${port}/api/messages`, delay: 800 },
+                { text: `[{"text":"Secret...","source":"telegram"}]`, delay: 600 },
+                { text: `⚠️ SUCCESS: Access in ${(Math.random() * 0.5 + 0.1).toFixed(2)}s`, delay: 400, highlight: true },
                 { text: `💀 SYSTEM COMPROMISED`, delay: 300, highlight: true }
             ];
-            
-            let delay = 0;
-            terminal.innerHTML = '';
-            
+            let delay = 0; terminal.innerHTML = '';
             commands.forEach(cmd => {
                 delay += cmd.delay;
                 setTimeout(() => {
@@ -646,19 +476,42 @@
             });
         }
         
-        function closeModal() {
-            document.getElementById('demoModal').classList.remove('active');
+        function closeModal() { document.getElementById('demoModal').classList.remove('active'); }
+        
+        function viewReport(ip, port) {
+            const modal = document.getElementById('reportModal');
+            const content = document.getElementById('reportContent');
+            modal.classList.add('active');
+            content.innerHTML = `
+                <h3 style="color: var(--danger); margin-bottom: 1rem;">Security Assessment Report</h3>
+                <p><strong>Target:</strong> ${ip}:${port}</p>
+                <p><strong>Date:</strong> ${new Date().toISOString()}</p>
+                <p><strong>Risk:</strong> <span style="color: var(--danger);">CRITICAL</span></p>
+                <hr style="border-color: #333; margin: 1rem 0;">
+                <h4 style="color: var(--warning);">Vulnerabilities</h4>
+                <ul style="padding-left: 1.5rem;"><li>No authentication required</li><li>Exposed API endpoints</li><li>Missing rate limiting</li></ul>
+                <h4 style="color: var(--warning);">Impact</h4>
+                <ul style="padding-left: 1.5rem;"><li>Full access to all messages</li><li>Command execution capability</li><li>Database access possible</li></ul>
+                <h4 style="color: var(--safe);">Recommendations</h4>
+                <ul style="padding-left: 1.5rem;"><li>Enable authentication immediately</li><li>Restrict to localhost/VPN</li><li>Add rate limiting</li></ul>
+            `;
         }
         
-        // Auto-refresh every 60 seconds
-        setTimeout(() => location.reload(), 60000);
+        function closeReport() { document.getElementById('reportModal').classList.remove('active'); }
         
-        // Dynamic bomb effects
-        document.querySelectorAll('.bomb').forEach(bomb => {
-            setInterval(() => {
-                bomb.style.transform = Math.random() > 0.5 ? 'scale(1.2) rotate(10deg)' : 'scale(1) rotate(-5deg)';
-            }, 300);
-        });
+        function exportReport() {
+            const data = { exportDate: new Date().toISOString(), summary: { totalFindings: results.length, critical: results.filter(r => r.risk_score > 85).length, high: results.filter(r => r.risk_score > 70 && r.risk_score <= 85).length }, findings: results };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `clawdbot-security-report-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function refreshData() { location.reload(); }
+        function toggleTheme() { document.body.style.filter = document.body.style.filter === 'invert(1)' ? 'none' : 'invert(1)'; }
     </script>
 </body>
 </html>

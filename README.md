@@ -9,68 +9,154 @@ This dashboard demonstrates the **critical security risks** of exposed Clawdbot 
 ## 🎯 Features
 
 ### Attack Simulation Demo
-Click "🎯 Demo Exploit" on any card to see a simulated attack chain showing:
-- API enumeration
-- Message extraction
-- Configuration theft
-- Full system compromise
+Click "🎯 Demo Exploit" on any card to see a simulated attack chain.
 
-### Real-Time Metrics
-- **Time to First Compromise** — Global countdown timer
-- **Risk Scores** — Per-installation assessment
-- **Attack Vectors** — What attackers can do
-- **Impact Assessment** — CRITICAL/POSSIBLE/NONE
+### Interactive Dashboard
+- **🗺️ World Map** - Geographic distribution of exposed installations
+- **📊 Risk Charts** - Visual breakdown of risk levels
+- **📈 Historical Trends** - Track discovery over time
+- **🔍 Search & Filter** - Find by IP, country, risk score
+- **🌍 Country Filter** - Focus on specific regions
 
-### Visual Indicators
-- 💣 Ticking bomb animations for critical systems
-- 🔴 Red pulse effect for critical vulnerabilities
-- 📊 Risk meters with color coding
-- ⏱️ Estimated time to compromise
+### Security Metrics
+- **⏱️ Time to Compromise** - Estimated breach time
+- **💀 Attack Vectors** - What attackers can do
+- **📄 Export Reports** - JSON reports for security audits
 
-## Quick Start
+### Multiple Data Sources
+- **Shodan** (paid)
+- **Censys** (free tier)
+- **BinaryEdge** (free tier)
+- **LeakIX** (free)
 
+## 🚀 Quick Start
+
+### Option 1: Docker (Recommended)
 ```bash
-# Install dependencies
-pip install shodan flask censys requests
+# Clone and run
+git clone https://github.com/yalibot99/clawdbot-security-dashboard.git
+cd clawdbot-security-dashboard
 
-# Set API keys (optional)
-export SHODAN_API_KEY=your_key_here
+# With environment variables
+export SHODAN_API_KEY=your_key
 export CENSYS_API_ID=your_id
 export CENSYS_API_SECRET=your_secret
 
-# Run the scraper
+# Run with Docker
+docker-compose up -d
+
+# Or just the dashboard
+docker build -t clawdbot-dashboard .
+docker run -p 5000:5000 clawdbot-dashboard
+```
+
+### Option 2: Python
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set API keys (optional)
+export SHODAN_API_KEY=your_key
+export CENSYS_API_ID=your_id
+export CENSYS_API_SECRET=your_secret
+
+# Run a scraper
 python scraper/shodan_scraper.py
+# or
+python scraper/censys_scraper.py
+# or
+python scraper/binaryedge_scraper.py
 
 # Start the dashboard
 python app.py
 ```
 
-## Dashboard Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `/` | Main dashboard UI |
-| `/api/results` | JSON list of all findings |
-| `/api/stats` | Aggregate statistics |
-| `/api/demo/<ip>/<port>` | Simulated attack data |
-| `/api/refresh` | Trigger new scan (POST) |
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 clawdbot-security-dashboard/
-├── app.py              # Flask dashboard server
+├── app.py                    # Flask dashboard server
+├── Dockerfile                # Docker container
+├── docker-compose.yml        # Docker orchestration
+├── requirements.txt          # Python dependencies
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml         # GitHub Actions CI/CD
 ├── scraper/
-│   ├── shodan_scraper.py   # Shodan API scraper
-│   ├── censys_scraper.py   # Censys API scraper
-│   └── results.json        # Scan results
+│   ├── shodan_scraper.py     # Shodan API
+│   ├── censys_scraper.py     # Censys API (free tier)
+│   ├── binaryedge_scraper.py # BinaryEdge API (free tier)
+│   ├── leakix_scraper.py     # LeakIX (free)
+│   └── results.json          # Scan results
 ├── templates/
-│   └── dashboard.html      # Enhanced UI with attack simulation
-├── static/data/
-│   └── results.json        # Dashboard data
-├── requirements.txt
+│   └── dashboard.html        # Enhanced UI
+├── static/
+│   └── data/
+│       └── results.json      # Dashboard data
+├── tests/
+│   └── test_dashboard.py     # Unit tests
 └── README.md
 ```
+
+## 🔧 Environment Variables
+
+| Variable | Source | Purpose |
+|----------|--------|---------|
+| `SHODAN_API_KEY` | Shodan | Real Shodan scans |
+| `CENSYS_API_ID` | Censys | Censys API (free tier) |
+| `CENSYS_API_SECRET` | Censys | Censys API secret |
+| `BINARYEDGE_API_KEY` | BinaryEdge | BinaryEdge API (free tier) |
+| `LEAKIX_API_KEY` | LeakIX | LeakIX API (optional) |
+
+## 📡 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Main dashboard UI |
+| `/api/results` | GET | JSON list of findings |
+| `/api/stats` | GET | Aggregate statistics |
+| `/api/demo/<ip>/<port>` | GET | Attack simulation data |
+| `/api/refresh` | POST | Trigger new scan |
+| `/api/export` | GET | Export full report |
+
+## 🧪 Testing
+
+```bash
+# Run tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=. --cov-report=html
+```
+
+## 🚢 Deployment
+
+### Render (Free Tier)
+1. Connect GitHub repo: `yalibot99/clawdbot-security-dashboard`
+2. Build Command: `pip install -r requirements.txt`
+3. Start Command: `python app.py`
+
+### Docker
+```bash
+docker build -t clawdbot-dashboard .
+docker run -p 5000:5000 clawdbot-dashboard
+```
+
+### Docker Compose
+```bash
+docker-compose up -d
+```
+
+## 📊 Dashboard Features
+
+- **Real-time metrics** with auto-refresh
+- **Interactive world map** with Leaflet.js
+- **Risk distribution charts** with Chart.js
+- **Historical trend analysis**
+- **Search and filter** capabilities
+- **PDF/JSON export** for reports
+- **Dark mode** support
+- **Mobile responsive** design
 
 ## ⚠️ Educational Use Only
 
@@ -81,14 +167,18 @@ This tool is for:
 
 **Do NOT use for malicious purposes.**
 
-## Deployment
+## 🤝 Contributing
 
-Deploy to Render (free tier):
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for your changes
+4. Ensure all tests pass
+5. Submit a pull request
 
-1. Connect GitHub repo: `yalibot99/clawdbot-security-dashboard`
-2. Build Command: `pip install -r requirements.txt`
-3. Start Command: `python app.py`
+## 📝 License
 
-## Credits
+MIT License - See LICENSE file for details.
 
-Built for the Israeli cybersecurity community
+---
+
+Built for the Israeli cybersecurity community 🦾

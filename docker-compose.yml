@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - CENSYS_API_ID=${CENSYS_API_ID:-}
+      - CENSYS_API_SECRET=${CENSYS_API_SECRET:-}
+    volumes:
+      - ./scraper/results.json:/app/static/data/results.json:ro
+    restart: unless-stopped
+    
+  scraper:
+    build: .
+    entrypoint: ["python", "scraper/shodan_scraper.py"]
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+    volumes:
+      - ./scraper/results.json:/app/scraper/results.json
+    restart: unless-stopped
