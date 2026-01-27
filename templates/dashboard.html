@@ -400,12 +400,7 @@
             data: {
                 labels: ['Critical', 'High', 'Medium', 'Low'],
                 datasets: [{
-                    data: [
-                        {{ results|selectattr('risk_score', '>', 85)|list|length }},
-                        {{ results|selectattr('risk_score', '>', 70)|selectattr('risk_score', '<=', 85)|list|length }},
-                        {{ results|selectattr('risk_score', '>', 40)|selectattr('risk_score', '<=', 70)|list|length }},
-                        {{ results|selectattr('risk_score', '<=', 40)|list|length }}
-                    ],
+                    data: {{ stats.risk_distribution }},
                     backgroundColor: ['#ff0000', '#ff3366', '#ffaa00', '#00ff88']
                 }]
             },

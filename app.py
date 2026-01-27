@@ -18,10 +18,8 @@ def ensure_data_file():
     data_dir = 'static/data'
     data_file = os.path.join(data_dir, 'results.json')
     
-    # Create directory if needed
     os.makedirs(data_dir, exist_ok=True)
     
-    # Copy from scraper if exists
     scraper_file = 'scraper/results.json'
     if os.path.exists(scraper_file) and not os.path.exists(data_file):
         shutil.copy(scraper_file, data_file)
@@ -41,19 +39,26 @@ def index():
     """Main dashboard."""
     results = load_results()
     
-    # Add dynamic calculated fields
     for r in results:
-        # Time to compromise (estimated)
         r['time_to_compromise'] = max(1, int((100 - r.get('risk_score', 50)) * 0.5))
+    
+    # Calculate chart data
+    critical_count = sum(1 for r in results if r.get('risk_score', 0) > 85)
+    high_count = sum(1 for r in results if 70 < r.get('risk_score', 0) <= 85)
+    medium_count = sum(1 for r in results if 40 < r.get('risk_score', 0) <= 70)
+    low_count = sum(1 for r in results if r.get('risk_score', 0) <= 40)
     
     stats = {
         'total': len(results),
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
-        'critical': sum(1 for r in results if r.get('risk_score', 0) > 85),
+        'critical': critical_count,
         'avg_risk': sum(r.get('risk_score', 0) for r in results) / max(len(results), 1),
         'countries': len(set(r.get('location', {}).get('country_name', 'Unknown') for r in results)),
-        'total_exposed': len(results) * random.randint(100, 10000),  # Simulated
-        'attack_surface': len(results)
+        'total_exposed': len(results) * random.randint(100, 10000),
+        'attack_surface': len(results),
+        # Chart data
+        'risk_distribution': [critical_count, high_count, medium_count, low_count],
+        'risk_labels': ['Critical', 'High', 'Medium', 'Low']
     }
     
     return render_template('dashboard.html', results=results, stats=stats)
@@ -70,14 +75,20 @@ def api_results():
 def api_stats():
     """JSON API for stats."""
     results = load_results()
+    critical_count = sum(1 for r in results if r.get('risk_score', 0) > 85)
+    high_count = sum(1 for r in results if 70 < r.get('risk_score', 0) <= 85)
+    medium_count = sum(1 for r in results if 40 < r.get('risk_score', 0) <= 70)
+    low_count = sum(1 for r in results if r.get('risk_score', 0) <= 40)
+    
     return jsonify({
         'total': len(results),
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
-        'critical': sum(1 for r in results if r.get('risk_score', 0) > 85),
+        'critical': critical_count,
         'avg_risk': sum(r.get('risk_score', 0) for r in results) / max(len(results), 1),
         'countries': len(set(r.get('location', {}).get('country_name', 'Unknown') for r in results)),
         'total_exposed': len(results) * random.randint(100, 10000),
-        'attack_surface': len(results)
+        'attack_surface': len(results),
+        'risk_distribution': [critical_count, high_count, medium_count, low_count]
     })
 
 @app.route('/api/demo/<ip>/<int:port>')
@@ -104,7 +115,6 @@ def api_demo(ip, port):
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
     """Trigger a new scan."""
-    # In production, this would trigger the scraper
     return jsonify({
         'status': 'success',
         'message': 'Scan triggered',
