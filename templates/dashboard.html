@@ -551,7 +551,26 @@
         
         // Fix map rendering after scroll/layout changes
         setTimeout(() => { map.invalidateSize(); }, 100);
-        window.addEventListener('scroll', () => { if (window.scrollY < 50) map.invalidateSize(); }, { passive: true });
+        // Invalidate map when it becomes visible again
+        const mapContainer = document.getElementById('map');
+        const mapObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => map.invalidateSize(), 50);
+                }
+            });
+        });
+        mapObserver.observe(mapContainer);
+        // Also on any scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (mapContainer.offsetParent !== null) {
+                    map.invalidateSize();
+                }
+            }, 100);
+        }, { passive: true });
         
         // Risk chart
         const riskChartCtx = document.getElementById('riskChart').getContext('2d');
