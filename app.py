@@ -185,6 +185,10 @@ def search_censys():
             
             logger.info(f"Censys query '{search['query']}': {response.status_code}")
             
+            if response.status_code == 401:
+                logger.error("Censys API authentication failed - check credentials")
+                return None
+                
             if response.status_code == 200:
                 data = response.json()
                 hits = data.get('result', {}).get('hits', [])
@@ -201,11 +205,14 @@ def search_censys():
                     services = hit.get('services', [])
                     port = services[0].get('port', int(search['query'])) if services else int(search['query'])
                     
+                    logger.info(f"  Fingerprinting {ip}:{port}...")
+                    
                     # Active fingerprinting
                     is_clawdbot, vulns, service_info = fingerprint_clawdbot(ip, port)
                     
                     if not is_clawdbot:
-                        logger.debug(f"  Skipping {ip}:{port} - not Clawdbot")
+                        logger.debug(f"    Skipping {ip}:{port} - fingerprint failed")
+                        logger.debug(f"    Service info: {service_info}")
                         continue  # Skip non-Clawdbot services
                     
                     # Add fingerprinting-based vulnerabilities
@@ -409,6 +416,7 @@ def api_scan_debug():
     
     raw_results = []
     seen_ips = set()
+    api_error = None
     
     queries = [
         {"query": "18789", "service": "Clawdbot Gateway"},
@@ -424,6 +432,10 @@ def api_scan_debug():
             auth = (CENSYS_API_ID, CENSYS_API_SECRET)
             response = requests.get(url, headers=headers, auth=auth, timeout=15)
             
+            if response.status_code == 401:
+                api_error = "Censys API authentication failed (401)"
+                continue
+                
             if response.status_code == 200:
                 data = response.json()
                 hits = data.get('result', {}).get('hits', [])
@@ -453,7 +465,8 @@ def api_scan_debug():
             logger.error(f"Debug scan error: {e}")
     
     return jsonify({
-        'status': 'success',
+        'status': 'error' if api_error else 'success',
+        'api_error': api_error,
         'total_hosts': len(raw_results),
         'hosts': raw_results,
         'timestamp': datetime.now().isoformat()
