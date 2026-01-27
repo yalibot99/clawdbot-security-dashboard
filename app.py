@@ -183,10 +183,14 @@ def search_censys():
             
             response = requests.get(url, headers=headers, auth=auth, timeout=15)
             
+            logger.info(f"Censys query '{search['query']}': {response.status_code}")
+            
             if response.status_code == 200:
                 data = response.json()
+                hits = data.get('result', {}).get('hits', [])
+                logger.info(f"  Found {len(hits)} hosts with port {search['query']}")
                 
-                for hit in data.get('result', {}).get('hits', []):
+                for hit in hits:
                     ip = hit.get('ip', 'unknown')
                     
                     if ip in seen_ips:
@@ -201,6 +205,7 @@ def search_censys():
                     is_clawdbot, vulns, service_info = fingerprint_clawdbot(ip, port)
                     
                     if not is_clawdbot:
+                        logger.debug(f"  Skipping {ip}:{port} - not Clawdbot")
                         continue  # Skip non-Clawdbot services
                     
                     # Add fingerprinting-based vulnerabilities
@@ -381,7 +386,69 @@ def api_scan():
         'status': 'success',
         'message': f'Scan complete. Found {len(results)} verified Clawdbot installations.',
         'timestamp': datetime.now().isoformat(),
-        'fingerprint_method': 'active_verification'
+        'fingerprint_method': 'active_verification',
+        'total_found': len(results)
+    })
+
+@app.route('/api/scan/debug', methods=['GET'])
+def api_scan_debug():
+    """Debug endpoint - shows raw Censys results without fingerprinting."""
+    if not CENSYS_API_ID or not CENSYS_API_SECRET:
+        return jsonify({
+            'status': 'error',
+            'message': 'Censys API not configured.'
+        }), 400
+    
+    raw_results = []
+    seen_ips = set()
+    
+    queries = [
+        {"query": "18789", "service": "Clawdbot Gateway"},
+        {"query": "3000", "service": "Clawdbot Web UI"},
+        {"query": "18791", "service": "Clawdbot Browser Control"},
+    ]
+    
+    headers = {'Accept': 'application/json'}
+    
+    for search in queries:
+        try:
+            url = f"https://search.censys.io/api/v2/hosts/search?q={search['query']}&per_page=20"
+            auth = (CENSYS_API_ID, CENSYS_API_SECRET)
+            response = requests.get(url, headers=headers, auth=auth, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                hits = data.get('result', {}).get('hits', [])
+                
+                for hit in hits:
+                    ip = hit.get('ip', 'unknown')
+                    if ip in seen_ips:
+                        continue
+                    seen_ips.add(ip)
+                    
+                    location = hit.get('location', {})
+                    services = hit.get('services', [])
+                    port = services[0].get('port', int(search['query'])) if services else int(search['query'])
+                    
+                    raw_results.append({
+                        'ip': ip,
+                        'port': port,
+                        'service': search['service'],
+                        'location': {
+                            'city': location.get('city', 'Unknown'),
+                            'country': location.get('country', 'Unknown'),
+                        },
+                        'timestamp': datetime.now().isoformat()
+                    })
+                    
+        except Exception as e:
+            logger.error(f"Debug scan error: {e}")
+    
+    return jsonify({
+        'status': 'success',
+        'total_hosts': len(raw_results),
+        'hosts': raw_results,
+        'timestamp': datetime.now().isoformat()
     })
 
 @app.route('/api/fingerprint/<ip>/<int:port>', methods=['GET'])
