@@ -281,11 +281,15 @@ def index():
     # Get last scan time
     data_file = ensure_data_file()
     last_scan = None
+    scan_count = 0
     if os.path.exists(data_file) and os.path.getsize(data_file) > 0:
+        with open(data_file) as f:
+            data = json.load(f)
+            scan_count = len(data)
         last_scan = datetime.fromtimestamp(os.path.getmtime(data_file)).isoformat()
     
     stats = {
-        'total': len(results),
+        'total': scan_count,
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
         'critical': critical_count,
         'avg_risk': sum(r.get('risk_score', 0) for r in results) / max(len(results), 1),
@@ -322,11 +326,15 @@ def api_stats():
     # Get last scan time
     data_file = ensure_data_file()
     last_scan = None
+    scan_count = 0
     if os.path.exists(data_file) and os.path.getsize(data_file) > 0:
+        with open(data_file) as f:
+            data = json.load(f)
+            scan_count = len(data)
         last_scan = datetime.fromtimestamp(os.path.getmtime(data_file)).isoformat()
     
     return jsonify({
-        'total': len(results),
+        'total': scan_count,
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
         'critical': critical_count,
         'avg_risk': sum(r.get('risk_score', 0) for r in results) / max(len(results), 1),
