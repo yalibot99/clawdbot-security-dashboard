@@ -1,2 +1,4 @@
 flask
 shodan
+censys
+requests

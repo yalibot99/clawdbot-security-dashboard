@@ -2,21 +2,46 @@
 
 Security awareness tool that discovers and visualizes accessible Clawdbot installations.
 
-## Quick Start
+## Scraper Options
+
+### 1. Shodan (Paid)
+```bash
+pip install shodan
+export SHODAN_API_KEY=your_key_here
+python scraper/shodan_scraper.py
+```
+
+### 2. Censys (Free Tier Available)
+```bash
+pip install censys requests
+export CENSYS_API_ID=your_api_id
+export CENSYS_API_SECRET=your_api_secret
+python scraper/censys_scraper.py
+```
+
+### 3. Mock Mode (Demo)
+No API needed — runs with sample data:
+```bash
+python scraper/shodan_scraper.py
+# or
+python scraper/censys_scraper.py
+```
+
+## Run Dashboard
 
 ```bash
-# Install dependencies
-pip install shodan flask
-
-# Set your Shodan API key
-export SHODAN_API_KEY=your_key_here
-
-# Run the scraper
-python scraper/shodan_scraper.py
-
-# Start the dashboard
 python app.py
 ```
+
+Dashboard will be at: http://localhost:5000
+
+## Environment Variables
+
+| Variable | Source | Purpose |
+|----------|--------|---------|
+| `SHODAN_API_KEY` | Shodan | Real Shodan scans |
+| `CENSYS_API_ID` | Censys | Censys API (free tier) |
+| `CENSYS_API_SECRET` | Censys | Censys API secret |
 
 ## Dashboard Features
 
