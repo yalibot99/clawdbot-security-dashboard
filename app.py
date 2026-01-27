@@ -7,14 +7,30 @@ import json
 import os
 from flask import Flask, render_template, jsonify
 from datetime import datetime
+import shutil
 
 app = Flask(__name__)
 
+def ensure_data_file():
+    """Ensure results.json exists in static/data folder."""
+    data_dir = 'static/data'
+    data_file = os.path.join(data_dir, 'results.json')
+    
+    # Create directory if needed
+    os.makedirs(data_dir, exist_ok=True)
+    
+    # Copy from scraper if exists
+    scraper_file = 'scraper/results.json'
+    if os.path.exists(scraper_file) and not os.path.exists(data_file):
+        shutil.copy(scraper_file, data_file)
+    
+    return data_file
+
 def load_results():
     """Load scan results."""
-    results_file = 'scraper/results.json'
-    if os.path.exists(results_file):
-        with open(results_file) as f:
+    data_file = ensure_data_file()
+    if os.path.exists(data_file):
+        with open(data_file) as f:
             return json.load(f)
     return []
 
