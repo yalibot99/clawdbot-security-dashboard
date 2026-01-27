@@ -232,6 +232,8 @@
             border-radius: 8px; 
             min-height: 240px;
             background: var(--bg-tertiary);
+            position: relative;
+            z-index: 1;
         }
         
         .chart-container { height: 200px; }
@@ -533,9 +535,17 @@
         const results = {{ results|tojson }};
         
         // Initialize map
-        const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+        const map = L.map('map', { 
+            zoomControl: false,
+            attributionControl: true
+        }).setView([20, 0], 2);
+        
+        // Custom zoom control position
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap'
+            attribution: '© OpenStreetMap',
+            noWrap: false
         }).addTo(map);
         
         // Add zoom control to bottom-right of map
@@ -587,6 +597,11 @@
             }
             lastScrollY = currentScrollY;
         }, { passive: true });
+        
+        // Force map to stay within container bounds
+        map.on('zoomanim', () => {
+            requestAnimationFrame(() => map.invalidateSize());
+        });
         
         // Risk chart
         const riskChartCtx = document.getElementById('riskChart').getContext('2d');
