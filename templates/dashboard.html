@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clawdbot Security Dashboard</title>
+    <title>Clawdbot Security Dashboard — Exposed Installations</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -14,6 +14,33 @@
             min-height: 100vh;
         }
         
+        .warning-banner {
+            background: linear-gradient(90deg, #ff0000, #ff3366, #ff0000);
+            color: #fff;
+            text-align: center;
+            padding: 0.75rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            animation: blink 0.5s infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .warning-banner::before {
+            content: '🚨';
+            margin-right: 0.5rem;
+        }
+        
+        .warning-banner::after {
+            content: '🚨';
+            margin-left: 0.5rem;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
         .header {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             padding: 2rem;
@@ -22,24 +49,93 @@
         }
         
         .header h1 {
-            font-size: 2.5rem;
-            color: #ff3366;
-            text-shadow: 0 0 10px #ff3366;
-            animation: flicker 2s infinite;
+            font-size: 2rem;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
+            margin-bottom: 0.5rem;
         }
         
-        @keyframes flicker {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+        .header p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .impact-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: #0d0d15;
+            border-bottom: 1px solid #333;
+        }
+        
+        .impact-stat {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #333;
+        }
+        
+        .impact-stat.danger { border-color: #ff3366; }
+        
+        .impact-stat .label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .impact-stat .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .impact-stat .value.danger { color: #ff3366; }
+        .impact-stat .value.warning { color: #ffaa00; }
+        
+        .impact-stat .sub {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        .countdown-section {
+            background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
+            padding: 1rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #ff3366;
+        }
+        
+        .countdown-title {
+            color: #ff3366;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .countdown-timer {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff3366;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px #ff3366;
+        }
+        
+        .countdown-sub {
+            color: #888;
+            font-size: 0.8rem;
         }
         
         .stats-bar {
             display: flex;
             justify-content: center;
-            gap: 3rem;
-            padding: 1.5rem;
+            gap: 2rem;
+            padding: 1rem 2rem;
             background: #111;
             border-bottom: 1px solid #333;
+            flex-wrap: wrap;
         }
         
         .stat {
@@ -47,7 +143,7 @@
         }
         
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: bold;
         }
         
@@ -55,94 +151,257 @@
         .stat-value.warning { color: #ffaa00; }
         .stat-value.safe { color: #00ff88; }
         
+        .stat-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 1.5rem;
             padding: 2rem;
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         
         .card {
             background: #1a1a2e;
             border: 1px solid #333;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 1.5rem;
             position: relative;
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: all 0.3s;
         }
         
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.2);
+            box-shadow: 0 15px 40px rgba(255, 51, 102, 0.15);
         }
         
-        .card.high-risk {
-            border-color: #ff3366;
-            animation: pulse-border 2s infinite;
+        .card.critical {
+            border: 2px solid #ff0000;
+            animation: critical-pulse 2s infinite;
         }
         
-        @keyframes pulse-border {
-            0%, 100% { box-shadow: 0 0 10px #ff3366; }
-            50% { box-shadow: 0 0 25px #ff3366; }
+        @keyframes critical-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.6); }
         }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .ip-badge {
+            background: #0d0d15;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .risk-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .risk-badge.critical { background: #ff0000; color: #fff; }
+        .risk-badge.high { background: #ff3366; color: #fff; }
+        .risk-badge.medium { background: #ffaa00; color: #000; }
+        .risk-badge.low { background: #00ff88; color: #000; }
         
         .bomb {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 2rem;
-            animation: tick 0.5s infinite;
+            font-size: 2.5rem;
+            animation: tick 0.3s infinite;
         }
         
         @keyframes tick {
-            0%, 100% { transform: rotate(-5deg); }
-            50% { transform: rotate(5deg); }
-        }
-        
-        .ip {
-            font-size: 1.2rem;
-            color: #fff;
-            margin-bottom: 0.5rem;
+            0%, 100% { transform: rotate(-5deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.1); }
         }
         
         .location {
             color: #888;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-bottom: 1rem;
         }
         
+        .section-title {
+            color: #ff3366;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 1rem 0 0.5rem 0;
+        }
+        
         .risk-meter {
-            height: 8px;
+            height: 12px;
             background: #333;
-            border-radius: 4px;
+            border-radius: 6px;
             overflow: hidden;
-            margin: 1rem 0;
+            margin: 0.5rem 0;
         }
         
         .risk-fill {
             height: 100%;
-            transition: width 0.5s;
+            transition: width 0.8s ease-out;
         }
         
+        .risk-fill.critical { background: linear-gradient(90deg, #ff0000, #ff0000); }
         .risk-fill.high { background: linear-gradient(90deg, #ff3366, #ff0000); }
         .risk-fill.medium { background: linear-gradient(90deg, #ffaa00, #ff6600); }
         .risk-fill.low { background: linear-gradient(90deg, #00ff88, #00cc66); }
         
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+        
+        .score-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .score-value {
+            font-weight: bold;
+        }
+        
         .vulns {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
         }
         
         .vuln-tag {
+            background: rgba(255, 51, 102, 0.2);
+            border: 1px solid #ff3366;
+            color: #ff3366;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+        
+        .attack-vector {
+            background: #0d0d15;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .attack-title {
+            color: #ff3366;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        
+        .attack-list {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        
+        .attack-list li {
+            margin: 0.3rem 0;
+            list-style: none;
+            padding-left: 1rem;
+            position: relative;
+        }
+        
+        .attack-list li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #ff3366;
+            font-size: 0.6rem;
+        }
+        
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .terminal-line {
+            margin: 0.2rem 0;
+            opacity: 0.8;
+        }
+        
+        .terminal-line.highlight {
+            color: #ff3366;
+            font-weight: bold;
+        }
+        
+        .time-to-compromise {
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.1), transparent);
+            border-left: 3px solid #ff0000;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .ttp-label {
+            font-size: 0.7rem;
+            color: #ff0000;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        
+        .ttp-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ff0000;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid #ff3366;
+            background: transparent;
+            color: #ff3366;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
             background: #ff3366;
             color: #fff;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
+        }
+        
+        .btn.danger {
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+        
+        .btn.danger:hover {
+            background: #ff0000;
+            color: #fff;
         }
         
         .refresh-btn {
@@ -157,78 +416,137 @@
             cursor: pointer;
             font-family: inherit;
             font-size: 1rem;
-            animation: bounce 2s infinite;
+            box-shadow: 0 5px 20px rgba(255, 51, 102, 0.4);
+            z-index: 100;
         }
         
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
         
-        .terminal {
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid #ff3366;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            color: #ff3366;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .demo-terminal {
             background: #000;
-            border: 1px solid #333;
+            border-radius: 6px;
             padding: 1rem;
-            margin-top: 1rem;
-            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
             color: #00ff88;
+            font-size: 0.85rem;
+            height: 300px;
+            overflow-y: auto;
         }
         
-        .warning-banner {
-            background: #ff3366;
-            color: #fff;
-            text-align: center;
-            padding: 0.5rem;
-            font-weight: bold;
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div class="warning-banner">⚠️ SECURITY ALERT: Exposed installations detected ⚠️</div>
+    <div class="warning-banner">
+        🚨 CRITICAL: Exposed Clawdbot installations detected — Immediate action required 🚨
+    </div>
     
-    <div class="header">
-        <h1>💣 CLAWDBOT SECURITY SCANNER 💣</h1>
-        <p>Detecting accessible installations worldwide</p>
+    <div class="countdown-section">
+        <div class="countdown-title">⏱️ TIME TO FIRST COMPROMISE (Global Average)</div>
+        <div class="countdown-timer" id="globalTimer">00:00:00:00</div>
+        <div class="countdown-sub">Estimated time until first automated attack on new exposed instances</div>
+    </div>
+    
+    <div class="impact-stats">
+        <div class="impact-stat danger">
+            <div class="label">Potential Impact</div>
+            <div class="value danger">CRITICAL</div>
+            <div class="sub">Full system access possible</div>
+        </div>
+        <div class="impact-stat danger">
+            <div class="label">Exposed Messages</div>
+            <div class="value danger">∞</div>
+            <div class="sub">All conversations at risk</div>
+        </div>
+        <div class="impact-stat">
+            <div class="label">Attack Surface</div>
+            <div class="value warning">{{ stats.total }}</div>
+            <div class="sub">Active installations</div>
+        </div>
+        <div class="impact-stat">
+            <div class="label">Countries Affected</div>
+            <div class="value safe">{{ stats.countries|length }}</div>
+            <div class="sub">Global exposure</div>
+        </div>
     </div>
     
     <div class="stats-bar">
         <div class="stat">
             <div class="stat-value">{{ stats.total }}</div>
-            <div>Total Found</div>
+            <div class="stat-label">Total Found</div>
         </div>
         <div class="stat">
             <div class="stat-value danger">{{ stats.high_risk }}</div>
-            <div>High Risk</div>
+            <div class="stat-label">Critical/High Risk</div>
         </div>
         <div class="stat">
             <div class="stat-value warning">{{ "%.1f"|format(stats.avg_risk) }}</div>
-            <div>Avg Risk Score</div>
+            <div class="stat-label">Avg Risk Score</div>
         </div>
         <div class="stat">
-            <div class="stat-value safe">{{ stats.countries|length }}</div>
-            <div>Countries</div>
+            <div class="stat-value danger">90%</div>
+            <div class="stat-label">Exploitability</div>
         </div>
     </div>
     
     <div class="grid">
         {% for result in results %}
-        <div class="card {% if result.risk_score > 70 %}high-risk{% endif %}">
-            <div class="bomb">💣</div>
-            <div class="ip">🌐 {{ result.ip }}:{{ result.port }}</div>
-            <div class="location">📍 {{ result.location.city }}, {{ result.location.country_name }}</div>
-            
-            <div class="risk-meter">
-                <div class="risk-fill {% if result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}" 
-                     style="width: {{ result.risk_score }}%"></div>
+        <div class="card {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high-risk{% endif %}">
+            <div class="card-header">
+                <div class="ip-badge">🌐 {{ result.ip }}:{{ result.port }}</div>
+                <div class="bomb">💣</div>
             </div>
             
-            <div>Risk Score: {{ result.risk_score }}/100</div>
+            <div class="location">📍 {{ result.location.city }}, {{ result.location.country_name }}</div>
+            
+            <div class="section-title">Risk Assessment</div>
+            <div class="risk-meter">
+                <div class="risk-fill {% if result.risk_score > 85 %}critical{% elif result.risk_score > 70 %}high{% elif result.risk_score > 40 %}medium{% else %}low{% endif %}" 
+                     style="width: {{ result.risk_score }}%"></div>
+            </div>
+            <div class="score-row">
+                <span class="score-label">Overall Risk</span>
+                <span class="score-value {% if result.risk_score > 70 %}danger{% else %}warning{% endif %}">{{ result.risk_score }}/100</span>
+            </div>
             
             <div class="vulns">
                 {% for vuln in result.vulns %}
@@ -236,29 +554,110 @@
                 {% endfor %}
             </div>
             
+            <div class="time-to-compromise">
+                <div class="ttp-label">⏱️ Time to Compromise</div>
+                <div class="ttp-value">~{{ (100 - result.risk_score) * 0.5 + 1 }} minutes</div>
+            </div>
+            
+            <div class="attack-vector">
+                <div class="attack-title">⚠️ Attack Vectors</div>
+                <ul class="attack-list">
+                    <li>Read all Telegram/Signal/WhatsApp messages</li>
+                    <li>Access file system and downloads</li>
+                    <li>Execute arbitrary commands</li>
+                    <li>Access connected databases</li>
+                    <li>View authentication tokens</li>
+                </ul>
+            </div>
+            
             <div class="terminal">
-                <div>> Detected: {{ result.ip }}:{{ result.port }}</div>
-                <div>> Version: Unknown</div>
-                <div>> Status: EXPOSED 🚨</div>
+                <div class="terminal-line highlight">> DETECTED: {{ result.ip }}:{{ result.port }}</div>
+                <div class="terminal-line">> VERSION: Unknown</div>
+                <div class="terminal-line">> STATUS: 🔴 EXPOSED</div>
+                <div class="terminal-line">> AUTH: None required</div>
+                <div class="terminal-line danger">> ⚠️ GATEWAY FULLY ACCESSIBLE</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="showDemo('{{ result.ip }}', '{{ result.port }}')">🎯 Demo Exploit</button>
+                <button class="btn danger" onclick="alert('This would open a detailed security report')">📄 Full Report</button>
             </div>
         </div>
         {% endfor %}
     </div>
     
     <button class="refresh-btn" onclick="location.reload()">
-        🔄 SCAN AGAIN
+        🔄 RE-SCAN
     </button>
     
+    <!-- Demo Modal -->
+    <div class="modal" id="demoModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <div class="modal-title">🎯 Attack Simulation Demo</div>
+            <div class="demo-terminal" id="demoTerminal"></div>
+        </div>
+    </div>
+    
     <script>
-        // Auto-refresh every 30 seconds
-        setTimeout(() => location.reload(), 30000);
+        // Global countdown timer
+        let seconds = 0;
+        function updateTimer() {
+            seconds++;
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            document.getElementById('globalTimer').textContent = 
+                `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:00`;
+        }
+        setInterval(updateTimer, 1000);
         
-        // Add some dynamic effects
+        // Attack demo simulation
+        function showDemo(ip, port) {
+            const modal = document.getElementById('demoModal');
+            const terminal = document.getElementById('demoTerminal');
+            modal.classList.add('active');
+            
+            const commands = [
+                { text: `$ curl http://${ip}:${port}/api/health`, delay: 500 },
+                { text: `{"status":"ok","version":"unknown","uptime":1234567}`, delay: 800 },
+                { text: `$ curl http://${ip}:${port}/api/messages`, delay: 1000 },
+                { text: `[{"id":"123","text":"Hello","source":"telegram"...}]`, delay: 800 },
+                { text: `$ curl http://${ip}:${port}/api/config`, delay: 1000 },
+                { text: `{"api_keys":{"openai":"sk-..."},"database_url":"..."}`, delay: 600 },
+                { text: `⚠️  SUCCESS: Full system access obtained in 0.3 seconds`, delay: 500, highlight: true },
+                { text: `$ curl -X POST http://${ip}:${port}/api/exec -d 'cmd=whoami'`, delay: 800 },
+                { text: `root`, delay: 400 },
+                { text: `💀 SYSTEM COMPROMISED`, delay: 300, highlight: true }
+            ];
+            
+            let delay = 0;
+            terminal.innerHTML = '';
+            
+            commands.forEach(cmd => {
+                delay += cmd.delay;
+                setTimeout(() => {
+                    const line = document.createElement('div');
+                    line.className = cmd.highlight ? 'terminal-line highlight' : 'terminal-line';
+                    line.textContent = cmd.text;
+                    terminal.appendChild(line);
+                    terminal.scrollTop = terminal.scrollHeight;
+                }, delay);
+            });
+        }
+        
+        function closeModal() {
+            document.getElementById('demoModal').classList.remove('active');
+        }
+        
+        // Auto-refresh every 60 seconds
+        setTimeout(() => location.reload(), 60000);
+        
+        // Dynamic bomb effects
         document.querySelectorAll('.bomb').forEach(bomb => {
             setInterval(() => {
-                bomb.style.transform = bomb.style.transform === 'scale(1.2)' 
-                    ? 'scale(1)' : 'scale(1.2)';
-            }, 500);
+                bomb.style.transform = Math.random() > 0.5 ? 'scale(1.2) rotate(10deg)' : 'scale(1) rotate(-5deg)';
+            }, 300);
         });
     </script>
 </body>

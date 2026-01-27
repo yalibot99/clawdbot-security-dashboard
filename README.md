@@ -2,54 +2,93 @@
 
 Security awareness tool that discovers and visualizes accessible Clawdbot installations.
 
-## Scraper Options
+## 🚨 Warning
 
-### 1. Shodan (Paid)
+This dashboard demonstrates the **critical security risks** of exposed Clawdbot installations. Each exposed instance can be fully compromised in minutes.
+
+## 🎯 Features
+
+### Attack Simulation Demo
+Click "🎯 Demo Exploit" on any card to see a simulated attack chain showing:
+- API enumeration
+- Message extraction
+- Configuration theft
+- Full system compromise
+
+### Real-Time Metrics
+- **Time to First Compromise** — Global countdown timer
+- **Risk Scores** — Per-installation assessment
+- **Attack Vectors** — What attackers can do
+- **Impact Assessment** — CRITICAL/POSSIBLE/NONE
+
+### Visual Indicators
+- 💣 Ticking bomb animations for critical systems
+- 🔴 Red pulse effect for critical vulnerabilities
+- 📊 Risk meters with color coding
+- ⏱️ Estimated time to compromise
+
+## Quick Start
+
 ```bash
-pip install shodan
+# Install dependencies
+pip install shodan flask censys requests
+
+# Set API keys (optional)
 export SHODAN_API_KEY=your_key_here
+export CENSYS_API_ID=your_id
+export CENSYS_API_SECRET=your_secret
+
+# Run the scraper
 python scraper/shodan_scraper.py
-```
 
-### 2. Censys (Free Tier Available)
-```bash
-pip install censys requests
-export CENSYS_API_ID=your_api_id
-export CENSYS_API_SECRET=your_api_secret
-python scraper/censys_scraper.py
-```
-
-### 3. Mock Mode (Demo)
-No API needed — runs with sample data:
-```bash
-python scraper/shodan_scraper.py
-# or
-python scraper/censys_scraper.py
-```
-
-## Run Dashboard
-
-```bash
+# Start the dashboard
 python app.py
 ```
 
-Dashboard will be at: http://localhost:5000
+## Dashboard Endpoints
 
-## Environment Variables
+| Endpoint | Description |
+|----------|-------------|
+| `/` | Main dashboard UI |
+| `/api/results` | JSON list of all findings |
+| `/api/stats` | Aggregate statistics |
+| `/api/demo/<ip>/<port>` | Simulated attack data |
+| `/api/refresh` | Trigger new scan (POST) |
 
-| Variable | Source | Purpose |
-|----------|--------|---------|
-| `SHODAN_API_KEY` | Shodan | Real Shodan scans |
-| `CENSYS_API_ID` | Censys | Censys API (free tier) |
-| `CENSYS_API_SECRET` | Censys | Censys API secret |
+## Project Structure
 
-## Dashboard Features
-
-- 🎯 Real-time discovery of exposed installations
-- 💣 Ticking bomb indicators for high-risk systems
-- 📊 Risk scoring and categorization
-- 🔒 Security recommendations
+```
+clawdbot-security-dashboard/
+├── app.py              # Flask dashboard server
+├── scraper/
+│   ├── shodan_scraper.py   # Shodan API scraper
+│   ├── censys_scraper.py   # Censys API scraper
+│   └── results.json        # Scan results
+├── templates/
+│   └── dashboard.html      # Enhanced UI with attack simulation
+├── static/data/
+│   └── results.json        # Dashboard data
+├── requirements.txt
+└── README.md
+```
 
 ## ⚠️ Educational Use Only
 
-This tool is for security research and awareness. Always follow responsible disclosure practices.
+This tool is for:
+- Security research and awareness
+- Penetration testing education
+- Vulnerability disclosure preparation
+
+**Do NOT use for malicious purposes.**
+
+## Deployment
+
+Deploy to Render (free tier):
+
+1. Connect GitHub repo: `yalibot99/clawdbot-security-dashboard`
+2. Build Command: `pip install -r requirements.txt`
+3. Start Command: `python app.py`
+
+## Credits
+
+Built for the Israeli cybersecurity community
