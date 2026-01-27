@@ -48,8 +48,43 @@ def load_results():
     data_file = ensure_data_file()
     if os.path.exists(data_file):
         with open(data_file) as f:
-            return json.load(f)
-    return []
+            data = json.load(f)
+            if data:  # Only return if file has actual data
+                return data
+    
+    # Return demo/sample data if no real data exists
+    return [
+        {
+            "ip": "192.168.1.100",
+            "port": 3000,
+            "risk_score": 85,
+            "location": {"city": "Tel Aviv", "country_name": "Israel", "lat": 32.0853, "lng": 34.7818},
+            "vulns": ["exposed_api", "no_auth"],
+            "service": "Clawdbot Web UI",
+            "timestamp": datetime.now().isoformat(),
+            "source": "demo"
+        },
+        {
+            "ip": "10.0.0.55",
+            "port": 18789,
+            "risk_score": 92,
+            "location": {"city": "New York", "country_name": "United States", "lat": 40.7128, "lng": -74.0060},
+            "vulns": ["exposed_api", "exposed_terminal", "no_auth"],
+            "service": "Clawdbot Gateway",
+            "timestamp": datetime.now().isoformat(),
+            "source": "demo"
+        },
+        {
+            "ip": "172.16.0.23",
+            "port": 8080,
+            "risk_score": 45,
+            "location": {"city": "Berlin", "country_name": "Germany", "lat": 52.5200, "lng": 13.4050},
+            "vulns": ["outdated_version"],
+            "service": "Clawdbot Web UI",
+            "timestamp": datetime.now().isoformat(),
+            "source": "demo"
+        }
+    ]
 
 def calculate_risk_score(vulns):
     """Calculate risk score based on vulnerabilities."""
