@@ -551,25 +551,36 @@
         
         // Fix map rendering after scroll/layout changes
         setTimeout(() => { map.invalidateSize(); }, 100);
-        // Invalidate map when it becomes visible again
+        
+        // Aggressive map refresh on any visibility change
+        let mapVisible = true;
         const mapContainer = document.getElementById('map');
-        const mapObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    setTimeout(() => map.invalidateSize(), 50);
-                }
-            });
-        });
-        mapObserver.observe(mapContainer);
-        // Also on any scroll
-        let scrollTimeout;
+        
+        // Invalidate on scroll with multiple triggers
+        let scrollTicking = false;
         window.addEventListener('scroll', () => {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                if (mapContainer.offsetParent !== null) {
-                    map.invalidateSize();
-                }
-            }, 100);
+            if (!scrollTicking) {
+                requestAnimationFrame(() => {
+                    map.invalidateSize({ force: true });
+                    scrollTicking = false;
+                });
+                scrollTicking = true;
+            }
+        }, { passive: true });
+        
+        // Invalidate on resize
+        window.addEventListener('resize', () => {
+            map.invalidateSize({ force: true });
+        });
+        
+        // Invalidate when returning to top area
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+            if (lastScrollY > 100 && currentScrollY < 50) {
+                setTimeout(() => map.invalidateSize({ force: true }), 50);
+            }
+            lastScrollY = currentScrollY;
         }, { passive: true });
         
         // Risk chart
