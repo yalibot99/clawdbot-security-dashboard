@@ -1,0 +1,26 @@
+[
+  {
+    "ip": "192.168.1.100",
+    "port": 3000,
+    "location": {"country_name": "Israel", "city": "Tel Aviv"},
+    "vulns": ["exposed_api", "no_auth"],
+    "risk_score": 85,
+    "timestamp": "2026-01-27T17:00:00.000000"
+  },
+  {
+    "ip": "10.0.0.55",
+    "port": 3000,
+    "location": {"country_name": "United States", "city": "New York"},
+    "vulns": ["default_creds", "exposed_terminal"],
+    "risk_score": 92,
+    "timestamp": "2026-01-27T17:00:00.000000"
+  },
+  {
+    "ip": "172.16.0.23",
+    "port": 8080,
+    "location": {"country_name": "Germany", "city": "Berlin"},
+    "vulns": ["outdated_version"],
+    "risk_score": 45,
+    "timestamp": "2026-01-27T17:00:00.000000"
+  }
+]
