@@ -3,15 +3,23 @@
 Flask dashboard for Clawdbot security visualization.
 Enhanced version with attack simulations and real-time data.
 Uses Censys API for discovering exposed Clawdbot installations.
+Background scheduler for hourly auto-scans.
 """
 
 import json
 import os
 import random
 import requests
+import logging
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 import shutil
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -151,6 +159,7 @@ def fingerprint_clawdbot(ip, port):
 def search_censys():
     """Query Censys API for Clawdbot installations with fingerprinting."""
     if not CENSYS_API_ID or not CENSYS_API_SECRET:
+        logger.warning("Censys API not configured")
         return None
     
     results = []
@@ -221,10 +230,34 @@ def search_censys():
                     results.append(result)
                     
         except Exception as e:
-            print(f"Censys search error for {search['query']}: {e}")
+            logger.error(f"Censys search error for {search['query']}: {e}")
             continue
     
     return results
+
+def run_background_scan():
+    """Background task to run scans periodically."""
+    logger.info("🔄 Starting scheduled scan...")
+    
+    if not CENSYS_API_ID or not CENSYS_API_SECRET:
+        logger.warning("Censys API not configured, skipping scan")
+        return
+    
+    results = search_censys()
+    
+    if results is None:
+        logger.error("Scan failed")
+        return
+    
+    # Save results
+    data_file = ensure_data_file()
+    with open(data_file, 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    logger.info(f"✅ Scan complete. Found {len(results)} verified Clawdbot installations.")
+
+# Initialize scheduler
+scheduler = BackgroundScheduler()
 
 @app.route('/')
 def index():
@@ -240,6 +273,12 @@ def index():
     medium_count = sum(1 for r in results if 40 < r.get('risk_score', 0) <= 70)
     low_count = sum(1 for r in results if r.get('risk_score', 0) <= 40)
     
+    # Get last scan time
+    data_file = ensure_data_file()
+    last_scan = None
+    if os.path.exists(data_file) and os.path.getsize(data_file) > 0:
+        last_scan = datetime.fromtimestamp(os.path.getmtime(data_file)).isoformat()
+    
     stats = {
         'total': len(results),
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
@@ -251,7 +290,9 @@ def index():
         # Chart data
         'risk_distribution': [critical_count, high_count, medium_count, low_count],
         'risk_labels': ['Critical', 'High', 'Medium', 'Low'],
-        'api_connected': bool(CENSYS_API_ID)
+        'api_connected': bool(CENSYS_API_ID),
+        'last_scan': last_scan,
+        'auto_refresh': True
     }
     
     return render_template('dashboard.html', results=results, stats=stats)
@@ -273,6 +314,12 @@ def api_stats():
     medium_count = sum(1 for r in results if 40 < r.get('risk_score', 0) <= 70)
     low_count = sum(1 for r in results if r.get('risk_score', 0) <= 40)
     
+    # Get last scan time
+    data_file = ensure_data_file()
+    last_scan = None
+    if os.path.exists(data_file) and os.path.getsize(data_file) > 0:
+        last_scan = datetime.fromtimestamp(os.path.getmtime(data_file)).isoformat()
+    
     return jsonify({
         'total': len(results),
         'high_risk': sum(1 for r in results if r.get('risk_score', 0) > 70),
@@ -282,7 +329,9 @@ def api_stats():
         'total_exposed': len(results) * random.randint(100, 10000),
         'attack_surface': len(results),
         'risk_distribution': [critical_count, high_count, medium_count, low_count],
-        'api_connected': bool(CENSYS_API_ID)
+        'api_connected': bool(CENSYS_API_ID),
+        'last_scan': last_scan,
+        'auto_refresh': True
     })
 
 @app.route('/api/demo/<ip>/<int:port>')
@@ -358,9 +407,34 @@ def api_refresh():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/health')
+def api_health():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'ok',
+        'scheduler_running': scheduler.running if 'scheduler' in dir() else False,
+        'api_connected': bool(CENSYS_API_ID)
+    })
+
 if __name__ == '__main__':
     print("🚀 Dashboard starting at http://localhost:5000")
     print("🎯 Enhanced Security Dashboard with Attack Simulations")
     print(f"📡 Censys API: {'Connected' if CENSYS_API_ID else 'Not configured'}")
     print(f"🔍 Fingerprinting: Active verification enabled")
+    print(f"⏰ Auto-scan: Every hour")
+    
+    # Start background scheduler
+    if CENSYS_API_ID and CENSYS_API_SECRET:
+        scheduler.add_job(
+            run_background_scan,
+            trigger=IntervalTrigger(hours=1),
+            id='hourly_scan',
+            name='Hourly Clawdbot scan',
+            replace_existing=True
+        )
+        scheduler.start()
+        print("✅ Background scheduler started")
+    else:
+        print("⚠️  API not configured, scheduler not started")
+    
     app.run(debug=True, host='0.0.0.0', port=5000)
