@@ -528,10 +528,13 @@
         const results = {{ results|tojson }};
         
         // Initialize map
-        const map = L.map('map').setView([20, 0], 2);
+        const map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
+        
+        // Add zoom control to bottom-right of map
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
         
         results.forEach(r => {
             const lat = r.location.lat || Math.random() * 160 - 80;
@@ -546,8 +549,13 @@
             }).addTo(map).bindPopup(`<b>${r.ip}:${r.port}</b><br>Risk: ${r.risk_score}`);
         });
         
+        // Fix map rendering after scroll/layout changes
+        setTimeout(() => { map.invalidateSize(); }, 100);
+        window.addEventListener('scroll', () => { if (window.scrollY < 50) map.invalidateSize(); }, { passive: true });
+        
         // Risk chart
-        new Chart(document.getElementById('riskChart'), {
+        const riskChartCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskChartCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Critical', 'High', 'Medium', 'Low'],
@@ -571,7 +579,8 @@
         });
         
         // Trend chart
-        new Chart(document.getElementById('trendChart'), {
+        const trendChartCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendChartCtx, {
             type: 'line',
             data: {
                 labels: ['7d', '6d', '5d', '4d', '3d', '2d', '1d'],
