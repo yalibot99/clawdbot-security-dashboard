@@ -539,12 +539,70 @@ def api_health():
         'api_connected': bool(CENSYS_API_ID)
     })
 
+# Security Intelligence Endpoints
+@app.route('/api/security-intel')
+def api_security_intel():
+    """Return security intelligence data."""
+    try:
+        intel_file = 'static/data/security_intel.json'
+        if os.path.exists(intel_file):
+            with open(intel_file) as f:
+                return jsonify(json.load(f))
+        return jsonify({'error': 'No security intelligence data available'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security-intel/refresh', methods=['POST'])
+def refresh_security_intel():
+    """Trigger security intelligence refresh."""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['python3', 'security_intel.py'],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        if result.returncode == 0:
+            return jsonify({
+                'status': 'success',
+                'message': 'Security intelligence refreshed'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': result.stderr
+            }), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/security-intel/summary')
+def api_security_summary():
+    """Quick summary endpoint for dashboard widgets."""
+    try:
+        intel_file = 'static/data/security_intel.json'
+        if os.path.exists(intel_file):
+            with open(intel_file) as f:
+                data = json.load(f)
+                return jsonify({
+                    'total_discussions': data['summary']['total_discussions'],
+                    'critical_count': data['summary']['critical_count'],
+                    'high_count': data['summary']['high_count'],
+                    'average_severity': data['summary']['average_severity'],
+                    'top_issue': data['top_security_concerns'][0]['issue'] if data['top_security_concerns'] else None,
+                    'generated': data['meta']['generated']
+                })
+        return jsonify({'error': 'No data available'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("🚀 Dashboard starting at http://localhost:5000")
-    print("🎯 Enhanced Security Dashboard with Attack Simulations")
-    print(f"📡 Censys API: {'Connected' if CENSYS_API_ID else 'Not configured'}")
-    print(f"🔍 Fingerprinting: Active verification enabled")
-    print(f"⏰ Auto-scan: Every hour")
+    print("🎯 Clawdbot Security Intelligence Dashboard")
+    print("🛡️  Security Intelligence: Active (web, X, blogs)")
+    print("🔍 Fingerprinting: Active verification enabled")
+    print("⏰ Auto-scan: Every hour")
     
     # Start background scheduler
     if CENSYS_API_ID and CENSYS_API_SECRET:
@@ -558,6 +616,8 @@ if __name__ == '__main__':
         scheduler.start()
         print("✅ Background scheduler started")
     else:
-        print("⚠️  API not configured, scheduler not started")
+        # Still start without external API
+        scheduler.start()
+        print("✅ Background scheduler started (no external API)")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

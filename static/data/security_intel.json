@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "generated": "2026-01-28T00:08:42.626915",
+    "hours_back": 24,
+    "total_sources": 6
+  },
+  "summary": {
+    "total_discussions": 8,
+    "critical_count": 4,
+    "high_count": 0,
+    "medium_count": 2,
+    "low_count": 2,
+    "average_severity": 69.1,
+    "total_engagement": 0
+  },
+  "severity_distribution": [
+    4,
+    0,
+    2,
+    2
+  ],
+  "source_breakdown": {
+    "ForkLog": 1,
+    "The Register": 1,
+    "Bitdefender": 1,
+    "TrendingTopics": 1,
+    "Cointelegraph": 1,
+    "X/Twitter": 3
+  },
+  "top_security_concerns": [
+    {
+      "issue": "Credential/API Key Exposure",
+      "count": 5,
+      "mitigation": "Use environment variables, rotate keys regularly, implement key rotation policies"
+    },
+    {
+      "issue": "Authentication Bypass",
+      "count": 5,
+      "mitigation": "Configure reverse proxy authentication, enable rate limiting, use HTTPS"
+    },
+    {
+      "issue": "Signal Pairing Credentials Exposed",
+      "count": 1,
+      "mitigation": "Ensure temp files have restricted permissions (600/700), use private directories"
+    },
+    {
+      "issue": "Prompt Injection Risk",
+      "count": 1,
+      "mitigation": "Input validation, sandbox prompts, monitor for injection patterns"
+    }
+  ],
+  "discussions": [
+    {
+      "title": "Critical Vulnerabilities Found in Clawdbot AI Agent for Cryptocurrency Theft",
+      "source": "ForkLog",
+      "url": "https://forklog.com/en/critical-vulnerabilities-found-in-clawdbot-ai-agent-for-cryptocurrency-theft/",
+      "severity": "critical",
+      "severity_score": 100,
+      "date": "2026-01-27 08:08",
+      "engagement": 0
+    },
+    {
+      "title": "Clawdbot becomes Moltbot, but can't shed security concerns",
+      "source": "The Register",
+      "url": "https://www.theregister.com/2026/01/27/clawdbot_moltbot_security_concerns/",
+      "severity": "critical",
+      "severity_score": 95,
+      "date": "2026-01-27 19:08",
+      "engagement": 0
+    },
+    {
+      "title": "Moltbot security alert exposed Clawdbot control panels risk credential leaks",
+      "source": "Bitdefender",
+      "url": "https://www.bitdefender.com/en-us/blog/hotforsecurity/moltbot-security-alert-exposed-clawdbot-control-panels-risk-credential-leaks-and-account-takeovers",
+      "severity": "critical",
+      "severity_score": 90,
+      "date": "2026-01-27 18:08",
+      "engagement": 0
+    },
+    {
+      "title": "Clawbot: Hyped AI agent risks leaking personal data",
+      "source": "TrendingTopics",
+      "url": "https://www.trendingtopics.eu/clawbot-hyped-ai-agent-risks-leaking-personal-data-security-experts-warn/",
+      "severity": "critical",
+      "severity_score": 88,
+      "date": "2026-01-27 07:08",
+      "engagement": 0
+    },
+    {
+      "title": "Viral AI assistant Clawdbot risks leaking private messages, credentials",
+      "source": "Cointelegraph",
+      "url": "https://www.tradingview.com/news/cointelegraph:99cbc6b7d094b:0-viral-ai-assistant-clawdbot-risks-leaking-private-messages-credentials/",
+      "severity": "medium",
+      "severity_score": 80,
+      "date": "2026-01-27 06:08",
+      "engagement": 0
+    },
+    {
+      "title": "@doodlestein: ...unauthorized attacker could be communicating with an LLM-based agent with full rein",
+      "source": "X/Twitter",
+      "url": "https://x.com/doodlestein/status/2007996215892336924",
+      "severity": "medium",
+      "severity_score": 50,
+      "date": "2026-01-27 12:08",
+      "engagement": 0
+    },
+    {
+      "title": "Luca Beurer-Kellner: The @clawdbot project... Good to see security documentation though, (i)PIs are ",
+      "source": "X/Twitter",
+      "url": "https://x.com/lbeurerkellner/status/2009164668720353544",
+      "severity": "low",
+      "severity_score": 25,
+      "date": "2026-01-27 16:08",
+      "engagement": 0
+    },
+    {
+      "title": "adi: simple guide to get started with @clawdbot",
+      "source": "X/Twitter",
+      "url": "https://x.com/IamAdiG/status/2009024662672691355",
+      "severity": "low",
+      "severity_score": 25,
+      "date": "2026-01-27 14:08",
+      "engagement": 0
+    }
+  ],
+  "mitigations": [
+    {
+      "issue": "Credential/API Key Exposure",
+      "mitigation": "Use environment variables, rotate keys regularly, implement key rotation policies"
+    },
+    {
+      "issue": "Authentication Bypass",
+      "mitigation": "Configure reverse proxy authentication, enable rate limiting, use HTTPS"
+    },
+    {
+      "issue": "Signal Pairing Credentials Exposed",
+      "mitigation": "Ensure temp files have restricted permissions (600/700), use private directories"
+    },
+    {
+      "issue": "Prompt Injection Risk",
+      "mitigation": "Input validation, sandbox prompts, monitor for injection patterns"
+    }
+  ]
+}
