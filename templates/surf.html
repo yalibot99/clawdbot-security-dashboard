@@ -2,190 +2,223 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🏄 Ayali's Wing Foil</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-dark: #0d1b2a;
-            --bg-card: #1b263b;
-            --bg-card-hover: #243b53;
-            --text-primary: #e0e1dd;
-            --text-secondary: #778da9;
-            --excellent: #00d26a;
+            --bg-dark: #0a0e17;
+            --bg-card: #141c2e;
+            --bg-card-hover: #1a2540;
+            --text-primary: #ffffff;
+            --text-secondary: #8b9bb4;
+            --excellent: #00e676;
             --good: #7cd953;
             --fair: #ffc300;
-            --poor: #ef233c;
-            --ocean: #0077b6;
+            --poor: #ff5252;
+            --text-excellent: #00e676;
+            --text-good: #7cd953;
+            --text-fair: #ffc300;
+            --text-poor: #ff5252;
+            --wind-icon: #4fc3f7;
         }
         
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        body {
+        html, body {
+            height: 100%;
             background: var(--bg-dark);
             color: var(--text-primary);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            min-height: 100vh;
-            padding: 1rem;
+            overflow-x: hidden;
         }
         
-        .container { max-width: 420px; margin: 0 auto; }
+        body {
+            padding: 12px;
+            padding-bottom: 100px;
+        }
+        
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
         
         /* Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            padding: 8px 0;
+            margin-bottom: 12px;
         }
-        
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        
-        .header h1 span { color: var(--excellent); }
         
         .back-link {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 14px;
+            opacity: 0.8;
         }
         
-        /* Spot Selector */
-        .spot-card {
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--excellent), var(--wind-icon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Spot */
+        .spot {
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
         
         .spot-name {
-            font-size: 1.1rem;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 0.75rem;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 6px;
         }
         
         .spot-inputs {
             display: flex;
-            gap: 0.5rem;
+            gap: 8px;
         }
         
         .spot-inputs input {
             flex: 1;
-            padding: 0.5rem 0.75rem;
+            padding: 10px 12px;
             border-radius: 8px;
-            border: 1px solid var(--text-secondary);
+            border: 1px solid #2a3a5a;
             background: var(--bg-dark);
             color: var(--text-primary);
-            font-size: 0.85rem;
+            font-size: 14px;
+            text-align: center;
         }
         
         .spot-btn {
-            padding: 0.5rem 1rem;
+            padding: 10px 20px;
             border-radius: 8px;
             border: none;
             background: var(--excellent);
-            color: var(--bg-dark);
-            font-weight: 600;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
             cursor: pointer;
         }
         
-        /* Best Time Card */
+        /* Best Card */
         .best-card {
-            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%);
-            border-radius: 20px;
-            padding: 1.5rem;
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
             text-align: center;
-            margin-bottom: 1rem;
-            border: 2px solid var(--excellent);
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .best-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--excellent), var(--wind-icon));
         }
         
         .best-label {
-            font-size: 0.85rem;
+            font-size: 11px;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
         }
         
         .best-time {
-            font-size: 3rem;
+            font-size: 48px;
             font-weight: 800;
-            color: var(--excellent);
             line-height: 1;
+            margin-bottom: 8px;
         }
         
         .best-rating {
-            display: inline-block;
-            margin-top: 0.5rem;
-            padding: 0.35rem 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
         }
         
-        .rating-excellent { background: var(--excellent); color: var(--bg-dark); }
-        .rating-good { background: var(--good); color: var(--bg-dark); }
-        .rating-fair { background: var(--fair); color: var(--bg-dark); }
-        .rating-poor { background: var(--poor); color: white; }
+        .rating-excellent { background: rgba(0, 230, 118, 0.15); color: var(--text-excellent); }
+        .rating-good { background: rgba(124, 217, 83, 0.15); color: var(--text-good); }
+        .rating-fair { background: rgba(255, 195, 0, 0.15); color: var(--text-fair); }
+        .rating-poor { background: rgba(255, 82, 82, 0.15); color: var(--text-poor); }
         
-        /* Quick Stats */
+        /* Stats Row */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1rem;
+            gap: 10px;
+            margin-bottom: 12px;
         }
         
         .stat-card {
             background: var(--bg-card);
             border-radius: 12px;
-            padding: 1rem;
+            padding: 14px;
             text-align: center;
         }
         
+        .stat-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 22px;
             font-weight: 700;
-            color: var(--text-primary);
         }
         
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 10px;
             color: var(--text-secondary);
-            margin-top: 0.25rem;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        /* Section Headers */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 1.5rem 0 0.75rem;
+        /* Hourly Section */
+        .section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
         
         .section-title {
-            font-size: 1rem;
+            font-size: 13px;
             font-weight: 600;
             color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .see-all {
-            font-size: 0.85rem;
-            color: var(--excellent);
-            text-decoration: none;
-        }
-        
-        /* Hourly Wind */
         .hourly-scroll {
             display: flex;
-            gap: 0.5rem;
+            gap: 8px;
             overflow-x: auto;
-            padding-bottom: 0.5rem;
+            padding-bottom: 8px;
+            margin: 0 -8px;
+            padding: 0 8px 8px;
             scrollbar-width: none;
         }
         
@@ -193,138 +226,186 @@
         
         .hour-chip {
             flex-shrink: 0;
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 0.75rem;
+            background: var(--bg-card-hover);
+            border-radius: 10px;
+            padding: 10px 12px;
             text-align: center;
-            min-width: 60px;
+            min-width: 52px;
+            border: 2px solid transparent;
+            transition: all 0.2s;
         }
         
         .hour-chip.best {
-            background: var(--excellent);
-            color: var(--bg-dark);
+            border-color: var(--excellent);
+            background: rgba(0, 230, 118, 0.1);
         }
         
         .hour-chip.good {
-            background: var(--good);
-            color: var(--bg-dark);
+            background: rgba(124, 217, 83, 0.1);
         }
         
         .hour-chip.fair {
-            background: var(--fair);
-            color: var(--bg-dark);
+            background: rgba(255, 195, 0, 0.1);
         }
         
         .hour-chip.poor {
-            background: var(--bg-card);
-            opacity: 0.6;
+            opacity: 0.5;
         }
         
         .hour-time {
-            font-size: 0.75rem;
-            opacity: 0.8;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
         }
         
         .hour-wind {
-            font-size: 1rem;
+            font-size: 18px;
             font-weight: 700;
-            margin: 0.25rem 0;
+            margin-bottom: 2px;
         }
         
         .hour-dir {
-            font-size: 0.7rem;
-            opacity: 0.8;
+            font-size: 10px;
+            color: var(--text-secondary);
         }
         
-        /* 3-Day Forecast */
-        .day-card {
-            background: var(--bg-card);
+        /* Wind Gauge */
+        .wind-gauge {
+            background: var(--bg-card-hover);
             border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .gauge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .gauge-title {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .gauge-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--wind-icon);
+        }
+        
+        .gauge-bar {
+            height: 6px;
+            background: var(--bg-dark);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .gauge-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .gauge-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        
+        /* Days */
+        .day-card {
+            background: var(--bg-card-hover);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 12px;
         }
+        
+        .day-card:last-child { margin-bottom: 0; }
         
         .day-card.best {
             border: 2px solid var(--excellent);
+            background: rgba(0, 230, 118, 0.05);
         }
         
         .day-icon {
-            font-size: 1.5rem;
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
         }
         
         .day-info { flex: 1; }
         
         .day-name {
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            font-size: 14px;
+            margin-bottom: 2px;
         }
         
         .day-details {
-            font-size: 0.8rem;
+            font-size: 11px;
             color: var(--text-secondary);
         }
         
         .day-rating {
-            font-size: 0.85rem;
+            font-size: 12px;
             font-weight: 700;
-            padding: 0.35rem 0.75rem;
-            border-radius: 20px;
+            padding: 6px 12px;
+            border-radius: 16px;
         }
         
-        /* Wind Summary */
-        .summary-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .summary-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-        
-        .summary-text {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: var(--text-primary);
-        }
-        
-        .summary-text strong { color: var(--excellent); }
-        
-        /* Source */
-        .source-info {
-            margin-top: 1.5rem;
-            padding: 0.75rem;
-            background: var(--bg-card);
-            border-radius: 8px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-align: center;
-        }
+        .day-rating.excellent { background: rgba(0, 230, 118, 0.15); color: var(--text-excellent); }
+        .day-rating.good { background: rgba(124, 217, 83, 0.15); color: var(--text-good); }
+        .day-rating.fair { background: rgba(255, 195, 0, 0.15); color: var(--text-fair); }
+        .day-rating.poor { background: rgba(255, 82, 82, 0.15); color: var(--text-poor); }
         
         /* Windy Button */
         .windy-btn {
             display: block;
             text-align: center;
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #1e8c99 0%, #2eb8b8 100%);
+            padding: 14px;
+            background: linear-gradient(135deg, #1e8c99, #2eb8b8);
             border-radius: 12px;
             color: white;
             text-decoration: none;
             font-weight: 600;
+            font-size: 14px;
+            margin-top: 12px;
         }
         
-        /* Loading state */
+        /* Source */
+        .source {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+        
+        /* Loading */
         .loading {
             opacity: 0.5;
             pointer-events: none;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
         }
     </style>
 </head>
@@ -333,70 +414,85 @@
         <!-- Header -->
         <div class="header">
             <a href="/" class="back-link">← Security</a>
-            <h1>Ayali's <span>Wing Foil</span></h1>
+            <div class="header-title">Ayali's Wing Foil</div>
+            <div style="width: 50px;"></div>
         </div>
         
-        <!-- Spot Selector -->
-        <div class="spot-card">
+        <!-- Spot -->
+        <div class="spot">
             <div class="spot-name">📍 <span id="spot-name">Tel Aviv Beach</span></div>
             <div class="spot-inputs">
-                <input type="text" id="lat" placeholder="Lat" value="32.0853">
-                <input type="text" id="lon" placeholder="Lon" value="34.7818">
+                <input type="number" id="lat" step="0.0001" placeholder="Lat" value="32.0853">
+                <input type="number" id="lon" step="0.0001" placeholder="Lon" value="34.7818">
                 <button class="spot-btn" onclick="updateForecast()">Go</button>
             </div>
         </div>
         
         <!-- Best Time -->
-        <div class="best-card" id="best-card">
-            <div class="best-label">Best Time Today</div>
+        <div class="best-card">
+            <div class="best-label">Best Time</div>
             <div class="best-time" id="best-time">--:--</div>
-            <span class="best-rating" id="best-rating">Loading...</span>
+            <div class="best-rating" id="best-rating">Loading</div>
         </div>
         
         <!-- Quick Stats -->
         <div class="stats-row">
             <div class="stat-card">
+                <div class="stat-icon">💨</div>
                 <div class="stat-value" id="stat-wind">--</div>
-                <div class="stat-label">💨 Wind (km/h)</div>
+                <div class="stat-label">Wind km/h</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">🧭</div>
                 <div class="stat-value" id="stat-dir">--</div>
-                <div class="stat-label">🧭 Direction</div>
+                <div class="stat-label">Direction</div>
             </div>
             <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
                 <div class="stat-value" id="stat-hours">--</div>
-                <div class="stat-label">⏱️ Good Hours</div>
+                <div class="stat-label">Good Hours</div>
             </div>
         </div>
         
-        <!-- Hourly Wind -->
-        <div class="section-header">
-            <span class="section-title">Hourly Wind</span>
-        </div>
-        <div class="hourly-scroll" id="hourly-scroll">
-            <div class="hour-chip">Loading...</div>
+        <!-- Wind Gauge -->
+        <div class="wind-gauge">
+            <div class="gauge-header">
+                <div class="gauge-title">Wind Speed</div>
+                <div class="gauge-value" id="gauge-value">-- km/h</div>
+            </div>
+            <div class="gauge-bar">
+                <div class="gauge-fill" id="gauge-fill" style="width: 0%; background: var(--excellent);"></div>
+            </div>
+            <div class="gauge-labels">
+                <span>0</span>
+                <span>15</span>
+                <span>30</span>
+                <span>45+</span>
+            </div>
         </div>
         
-        <!-- Wind Summary -->
-        <div class="summary-card">
-            <div class="summary-title">💨 Wind Forecast</div>
-            <div class="summary-text" id="wind-summary">Loading forecast...</div>
+        <!-- Hourly -->
+        <div class="section">
+            <div class="section-title">Hourly Forecast</div>
+            <div class="hourly-scroll" id="hourly-scroll">
+                <div class="hour-chip">Loading</div>
+            </div>
         </div>
         
-        <!-- 3-Day Forecast -->
-        <div class="section-header">
-            <span class="section-title">3-Day Forecast</span>
+        <!-- 3-Day -->
+        <div class="section">
+            <div class="section-title">3 Day Forecast</div>
+            <div id="days-container"></div>
         </div>
-        <div id="days-container"></div>
         
-        <!-- Windy Link -->
+        <!-- Windy -->
         <a id="windy-link" href="#" target="_blank" class="windy-btn">
-            🗺️ View on Windy.com
+            🗺️ View on Windy
         </a>
         
         <!-- Source -->
-        <div class="source-info">
-            Data: <span id="data-source">Loading...</span> · Updated: <span id="data-updated">--</span>
+        <div class="source">
+            Data: <span id="data-source">--</span> · <span id="data-updated">--</span>
         </div>
     </div>
     
@@ -408,73 +504,52 @@
             return 'poor';
         }
         
-        function getRatingLabel(rating) {
-            if (rating === 'excellent') return '🔥 Excellent';
-            if (rating === 'good') return '✅ Good';
-            if (rating === 'fair') return '⚠️ Fair';
-            return '❌ Poor';
+        function getRatingText(rating) {
+            const labels = { excellent: '🔥 Excellent', good: '✅ Good', fair: '⚠️ Fair', poor: '❌ Poor' };
+            return labels[rating] || '❌ Poor';
         }
         
-        function getChipClass(score) {
-            if (score > 40) return 'best';
-            if (score > 20) return 'good';
-            if (score > 0) return 'fair';
-            return 'poor';
-        }
-        
-        function setLoading(isLoading) {
-            const el = document.body;
-            if (isLoading) {
-                el.classList.add('loading');
+        function updateGauge(windSpeed) {
+            const fill = document.getElementById('gauge-fill');
+            const value = document.getElementById('gauge-value');
+            const maxWind = 50;
+            const percent = Math.min((windSpeed / maxWind) * 100, 100);
+            
+            fill.style.width = percent + '%';
+            value.textContent = windSpeed.toFixed(1) + ' km/h';
+            
+            if (windSpeed >= 15 && windSpeed <= 40) {
+                fill.style.background = 'var(--excellent)';
+            } else if (windSpeed >= 10) {
+                fill.style.background = 'var(--fair)';
             } else {
-                el.classList.remove('loading');
+                fill.style.background = 'var(--poor)';
             }
         }
         
         async function updateForecast() {
-            const latInput = document.getElementById('lat').value.trim();
-            const lonInput = document.getElementById('lon').value.trim();
-            
-            if (!latInput || !lonInput) {
-                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Please enter latitude and longitude</span>';
-                return;
-            }
-            
-            const lat = parseFloat(latInput);
-            const lon = parseFloat(lonInput);
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lon = parseFloat(document.getElementById('lon').value);
             
             if (isNaN(lat) || isNaN(lon)) {
-                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Invalid coordinates</span>';
+                alert('Invalid coordinates');
                 return;
             }
             
-            document.getElementById('spot-name').textContent = `${lat}, ${lon}`;
+            document.getElementById('spot-name').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
             document.getElementById('windy-link').href = `https://www.windy.com/?${lat},${lon},8`;
             
-            setLoading(true);
+            document.body.classList.add('loading');
             
             try {
-                // Fetch main forecast
+                // Main forecast
                 const resp = await fetch(`/api/surf/forecast?lat=${lat}&lon=${lon}`);
-                
-                if (!resp.ok) {
-                    throw new Error('Failed to fetch forecast');
-                }
-                
                 const data = await resp.json();
                 
                 if (data.error) {
-                    document.getElementById('wind-summary').innerHTML = `<span style="color: var(--poor);">${data.error}</span>`;
+                    alert(data.error);
                     return;
                 }
-                
-                // Update source info
-                document.getElementById('data-source').textContent = data.source || 'Unknown';
-                document.getElementById('data-updated').textContent = data.updated ? 
-                    new Date(data.updated).toLocaleTimeString() : '--';
-                
-                // Update wind summary
-                document.getElementById('wind-summary').innerHTML = data.wind_summary || 'No wind data available';
                 
                 // Update best time
                 if (data.best_time) {
@@ -483,41 +558,32 @@
                     
                     const rating = getRatingClass(best.score || 0);
                     const ratingEl = document.getElementById('best-rating');
-                    ratingEl.textContent = getRatingLabel(rating);
+                    ratingEl.textContent = getRatingText(rating);
                     ratingEl.className = `best-rating rating-${rating}`;
                     
                     // Stats
-                    document.getElementById('stat-wind').textContent = best.wind_speed ? `${best.wind_speed.toFixed(0)}` : '--';
+                    document.getElementById('stat-wind').textContent = best.wind_speed ? best.wind_speed.toFixed(1) : '--';
                     document.getElementById('stat-dir').textContent = best.wind_dir_name || '--';
-                } else {
-                    document.getElementById('best-time').textContent = '--:--';
-                    document.getElementById('best-rating').textContent = 'No data';
-                    document.getElementById('best-rating').className = 'best-rating rating-poor';
+                    
+                    // Update gauge
+                    if (best.wind_speed) {
+                        updateGauge(best.wind_speed);
+                    }
                 }
+                
+                // Count good hours
+                const allHours = data.all_hours || [];
+                const goodHours = allHours.filter(h => h.wind_speed >= 10 && h.wind_speed <= 40 && h.hour >= 6 && h.hour <= 19);
+                document.getElementById('stat-hours').textContent = goodHours.length;
                 
                 // Hourly scroll
                 const scrollEl = document.getElementById('hourly-scroll');
                 scrollEl.innerHTML = '';
                 
                 const morningSurf = data.morning_surf || [];
-                const allHours = data.all_hours || [];
-                
-                // Create score lookup by hour
                 const scoreByHour = {};
-                morningSurf.forEach(h => {
-                    if (h && h.hour) {
-                        scoreByHour[h.hour] = h.score || 0;
-                    }
-                });
+                morningSurf.forEach(h => { if (h && h.hour) scoreByHour[h.hour] = h.score || 0; });
                 
-                // Count good hours (10-40 km/h, 6AM-7PM)
-                const goodHours = allHours.filter(h => 
-                    h && h.wind_speed >= 10 && h.wind_speed <= 40 && 
-                    h.hour >= 6 && h.hour <= 19
-                );
-                document.getElementById('stat-hours').textContent = goodHours.length;
-                
-                // Show hours from 6 AM to 7 PM
                 const displayHours = allHours.filter(h => h && h.hour >= 6 && h.hour <= 19 && h.wind_speed !== null);
                 
                 if (displayHours.length === 0) {
@@ -526,7 +592,7 @@
                     displayHours.forEach(h => {
                         const score = scoreByHour[h.hour] || 0;
                         const chip = document.createElement('div');
-                        chip.className = `hour-chip ${getChipClass(score)}`;
+                        chip.className = `hour-chip ${getRatingClass(score)}`;
                         chip.innerHTML = `
                             <div class="hour-time">${h.hour}:00</div>
                             <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
@@ -536,54 +602,48 @@
                     });
                 }
                 
-                // Fetch multi-day
+                // Multi-day
                 const multiResp = await fetch(`/api/surf/multi-day?lat=${lat}&lon=${lon}`);
-                
-                if (!multiResp.ok) {
-                    throw new Error('Failed to fetch multi-day forecast');
-                }
-                
                 const multiData = await multiResp.json();
                 
-                // Update 3-day
                 const daysContainer = document.getElementById('days-container');
                 daysContainer.innerHTML = '';
                 
-                if (!multiData.days || multiData.days.length === 0) {
-                    daysContainer.innerHTML = '<div class="day-card"><div class="day-info">No forecast data available</div></div>';
-                } else {
+                if (multiData.days && multiData.days.length > 0) {
                     multiData.days.slice(0, 3).forEach((day, idx) => {
                         const date = new Date(day.date + 'T12:00:00');
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                         
-                        let rating = getRatingClass(day.score || 0);
-                        let ratingText = getRatingLabel(rating).split(' ')[0];
-                        
+                        const rating = getRatingClass(day.score || 0);
+                        const ratingText = getRatingText(rating).split(' ')[0];
                         const isBest = idx === 0 && (day.score || 0) > 20;
                         
                         const dayEl = document.createElement('div');
                         dayEl.className = `day-card ${isBest ? 'best' : ''}`;
                         dayEl.innerHTML = `
-                            <div class="day-icon">${isBest ? '🏆' : '🏄'}</div>
+                            <div class="day-icon">${isBest ? '🏆' : '📅'}</div>
                             <div class="day-info">
                                 <div class="day-name">${dayName}</div>
                                 <div class="day-details">${day.good_hours || 0} good hours · ${(day.min_speed || 0).toFixed(0)}-${(day.max_speed || 0).toFixed(0)} km/h</div>
                             </div>
-                            <div class="day-rating rating-${rating}">${ratingText}</div>
+                            <div class="day-rating ${rating}">${ratingText}</div>
                         `;
                         daysContainer.appendChild(dayEl);
                     });
                 }
                 
+                // Source
+                document.getElementById('data-source').textContent = (data.source || '').replace(' (free)', '');
+                document.getElementById('data-updated').textContent = data.updated ? 
+                    new Date(data.updated).toLocaleTimeString() : '--';
+                
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Error loading data. Please try again.</span>';
             } finally {
-                setLoading(false);
+                document.body.classList.remove('loading');
             }
         }
         
-        // Auto-load on page load
         document.addEventListener('DOMContentLoaded', updateForecast);
     </script>
 </body>
