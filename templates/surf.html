@@ -90,6 +90,15 @@
             font-size: 0.9rem;
         }
         
+        .windy-btn {
+            background: linear-gradient(135deg, #1e8c99 0%, #2eb8b8 100%);
+            color: white;
+        }
+        .windy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 184, 184, 0.4);
+        }
+        
         .best-time {
             background: linear-gradient(135deg, var(--accent) 0%, var(--ocean) 100%);
             padding: 1.5rem;
@@ -233,6 +242,9 @@
                 <input type="text" id="lat" placeholder="Lat" value="32.0853">
                 <input type="text" id="lon" placeholder="Lon" value="34.7818">
                 <button onclick="updateForecast()">Get Forecast</button>
+                <a id="windy-link" href="#" target="_blank" class="btn windy-btn" style="text-decoration: none; padding: 0.4rem 1rem; border-radius: 8px; display: none;">
+                    🗺️ View on Windy
+                </a>
             </div>
         </div>
         
@@ -291,6 +303,11 @@
             
             document.getElementById('spot-name').textContent = `${lat}, ${lon}`;
             document.getElementById('coords').textContent = `(${lat}, ${lon})`;
+            
+            // Update Windy link
+            const windyLink = document.getElementById('windy-link');
+            windyLink.href = `https://www.windy.com/?${lat},${lon},8`;
+            windyLink.style.display = 'inline-flex';
             
             try {
                 const response = await fetch(`/api/surf/forecast?lat=${lat}&lon=${lon}`);
