@@ -600,6 +600,81 @@ def api_security_summary():
 
 # ============ SURF FORECAST ENDPOINTS ============
 
+def get_multi_day_forecast(lat, lon, days=3):
+    """Get 3-day forecast for all days."""
+    # Get weather data (wind) for multiple days
+    weather_url = "https://api.open-meteo.com/v1/forecast"
+    weather_params = {
+        'latitude': lat,
+        'longitude': lon,
+        'hourly': 'wind_speed_10m,wind_direction_10m',
+        'timezone': 'auto',
+        'forecast_days': days
+    }
+    
+    try:
+        weather_resp = requests.get(weather_url, params=weather_params, timeout=10)
+        weather_resp.raise_for_status()
+        weather_data = weather_resp.json()
+        
+        # Analyze each day
+        times = weather_data['hourly'].get('time', [])
+        wind_speeds = weather_data['hourly'].get('wind_speed_10m', [])
+        
+        daily_analysis = {}
+        for i, time in enumerate(times):
+            if i >= len(wind_speeds):
+                break
+            speed = wind_speeds[i]
+            if speed is None:
+                continue
+            
+            date = time[:10]
+            hour = datetime.fromisoformat(time).hour
+            
+            if date not in daily_analysis:
+                daily_analysis[date] = {'hours': [], 'good_hours': 0, 'max_speed': 0, 'min_speed': 100}
+            
+            daily_analysis[date]['hours'].append({'hour': hour, 'speed': speed})
+            
+            # Count good wing foil hours (10-40 km/h, 6 AM - 7 PM)
+            if 10 <= speed <= 40 and 6 <= hour <= 19:
+                daily_analysis[date]['good_hours'] += 1
+            
+            daily_analysis[date]['max_speed'] = max(daily_analysis[date]['max_speed'], speed)
+            daily_analysis[date]['min_speed'] = min(daily_analysis[date]['min_speed'], speed)
+        
+        # Score and rank days
+        days_ranked = []
+        for date, data in daily_analysis.items():
+            score = data['good_hours'] * 10  # More good hours = higher score
+            
+            # Bonus for optimal wind range
+            avg_speed = sum(h['speed'] for h in data['hours']) / len(data['hours']) if data['hours'] else 0
+            if 15 <= avg_speed <= 35:
+                score += 20  # Perfect average
+            
+            days_ranked.append({
+                'date': date,
+                'good_hours': data['good_hours'],
+                'max_speed': data['max_speed'],
+                'min_speed': data['min_speed'],
+                'score': score
+            })
+        
+        # Sort by score
+        days_ranked.sort(key=lambda x: x['score'], reverse=True)
+        
+        return {
+            'daily': days_ranked,
+            'source': 'Open-Meteo Weather API (free)',
+            'updated': datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Multi-day forecast error: {e}")
+        return None
+
+
 def get_surf_forecast(lat, lon, days=1):
     """Fetch surf forecast from Open-Meteo APIs (Marine + Weather for wind)."""
     # Get marine data (waves)
@@ -871,6 +946,68 @@ def api_surf_conditions():
     return jsonify({
         'hourly': forecast.get('hourly', {}),
         'timezone': forecast.get('timezone'),
+        'generated': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/surf/multi-day')
+def api_surf_multi_day():
+    """Get 3-day surf forecast comparison."""
+    lat = request.args.get('lat', 32.0853, type=float)
+    lon = request.args.get('lon', 34.7818, type=float)
+    
+    forecast = get_multi_day_forecast(lat, lon, days=3)
+    
+    if not forecast:
+        return jsonify({'error': 'Failed to fetch multi-day forecast'}), 500
+    
+    # Add recommendations
+    if forecast['daily']:
+        best_day = forecast['daily'][0]
+        recommendations = []
+        
+        for day in forecast['daily'][:3]:
+            date = datetime.strptime(day['date'], '%Y-%m-%d').strftime('%A, %b %d')
+            
+            if day['good_hours'] >= 6:
+                recommendations.append({
+                    'date': date,
+                    'rating': '🔥 Excellent',
+                    'message': f"{day['good_hours']} hours of good wind (10-40 km/h)",
+                    'best_for': 'Wing foiling'
+                })
+            elif day['good_hours'] >= 3:
+                recommendations.append({
+                    'date': date,
+                    'rating': '✅ Good',
+                    'message': f"{day['good_hours']} hours of good wind",
+                    'best_for': 'Wing foiling (short session)'
+                })
+            elif day['good_hours'] >= 1:
+                recommendations.append({
+                    'date': date,
+                    'rating': '⚠️ Fair',
+                    'message': f"Only {day['good_hours']} good hour - check timing",
+                    'best_for': 'Quick session'
+                })
+            else:
+                recommendations.append({
+                    'date': date,
+                    'rating': '❌ Poor',
+                    'message': 'No good wing foil conditions',
+                    'best_for': 'Skip'
+                })
+    
+    return jsonify({
+        'source': forecast['source'],
+        'updated': forecast['updated'],
+        'days': forecast['daily'],
+        'recommendations': recommendations if forecast['daily'] else [],
+        'best_day': {
+            'date': datetime.strptime(best_day['date'], '%Y-%m-%d').strftime('%A, %b %d') if best_day else None,
+            'rating': '🔥 Best Day' if best_day and best_day['score'] > 40 else ('✅ Good Day' if best_day else None),
+            'good_hours': best_day['good_hours'] if best_day else 0
+        },
         'generated': datetime.now().isoformat()
     })
 

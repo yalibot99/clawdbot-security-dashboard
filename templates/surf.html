@@ -342,6 +342,29 @@
             <strong>Data:</strong> <span id="data-source">Loading...</span><br>
             <strong>Updated:</strong> <span id="data-updated">Loading...</span>
         </div>
+        
+        <div class="why-section" id="multi-day-section">
+            <h3>📅 3-Day Forecast & Best Day</h3>
+            <div id="best-day-banner" style="background: linear-gradient(135deg, var(--accent) 0%, var(--ocean) 100%); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; text-align: center;">
+                <div style="font-size: 0.9rem; opacity: 0.9;">🏆 Best Day to Go Wing Foiling</div>
+                <div id="best-day-name" style="font-size: 1.5rem; font-weight: 700;">Loading...</div>
+                <div id="best-day-rating" style="font-size: 1rem;">--</div>
+            </div>
+            <table class="forecast-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Good Hours</th>
+                        <th>Wind Range</th>
+                        <th>Rating</th>
+                        <th>Verdict</th>
+                    </tr>
+                </thead>
+                <tbody id="multi-day-body">
+                    <tr><td colspan="5" style="text-align: center;">Loading 3-day forecast...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <script>
@@ -441,34 +464,67 @@
                 const allHoursBody = document.getElementById('all-hours-body');
                 allHoursBody.innerHTML = '';
                 
-                if (data.all_hours && data.all_hours.length > 0) {
-                    data.all_hours.forEach(entry => {
-                        // Wind rating
-                        let windClass = 'wind-bad';
-                        let windText = '❌ Light';
-                        if (entry.wind_speed >= 40) {
-                            windClass = 'wind-bad';
-                            windText = '💨 Strong';
-                        } else if (entry.wind_speed >= 15) {
-                            windClass = 'wind-good';
-                            windText = '✅ Good';
-                        } else if (entry.wind_speed >= 10) {
-                            windClass = 'wind-fair';
-                            windText = '⚠️ Light';
+                // Fetch 3-day forecast
+                fetch(`/api/surf/multi-day?lat=${lat}&lon=${lon}`)
+                    .then(res => res.json())
+                    .then(multiData => {
+                        if (multiData.error) {
+                            console.error('Multi-day error:', multiData.error);
+                            return;
                         }
                         
-                        allHoursBody.innerHTML += `
-                            <tr>
-                                <td>${entry.hour}:00</td>
-                                <td>${entry.wind_speed?.toFixed(1) || '--'} km/h</td>
-                                <td>${entry.wind_dir_name || '--'}</td>
-                                <td><span class="wind-indicator ${windClass}">${windText}</span></td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    allHoursBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hourly data available</td></tr>';
-                }
+                        // Update best day banner
+                        if (multiData.best_day) {
+                            document.getElementById('best-day-name').textContent = multiData.best_day.date || '--';
+                            document.getElementById('best-day-rating').textContent = 
+                                `${multiData.best_day.rating || '--'} · ${multiData.best_day.good_hours || 0} good hours`;
+                        }
+                        
+                        // Update multi-day table
+                        const multiBody = document.getElementById('multi-day-body');
+                        multiBody.innerHTML = '';
+                        
+                        if (multiData.days && multiData.days.length > 0) {
+                            multiData.days.forEach((day, idx) => {
+                                const date = new Date(day.date + 'T12:00:00');
+                                const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                                
+                                let ratingClass = 'condition-poor';
+                                let ratingText = '❌ Poor';
+                                let verdict = 'Skip';
+                                
+                                if (day.good_hours >= 6) {
+                                    ratingClass = 'condition-great';
+                                    ratingText = '🔥 Excellent';
+                                    verdict = 'Go all day';
+                                } else if (day.good_hours >= 3) {
+                                    ratingClass = 'condition-good';
+                                    ratingText = '✅ Good';
+                                    verdict = 'Good session';
+                                } else if (day.good_hours >= 1) {
+                                    ratingClass = 'condition-fair';
+                                    ratingText = '⚠️ Fair';
+                                    verdict = 'Quick session';
+                                }
+                                
+                                const isBest = idx === 0 && day.score > 20;
+                                const rowStyle = isBest ? 'background: rgba(100, 255, 218, 0.1);' : '';
+                                
+                                multiBody.innerHTML += `
+                                    <tr style="${rowStyle}">
+                                        <td><strong>${isBest ? '🏆 ' : ''}${dayName}</strong></td>
+                                        <td>${day.good_hours} hours</td>
+                                        <td>${day.min_speed?.toFixed(0) || '--'}-${day.max_speed?.toFixed(0) || '--'} km/h</td>
+                                        <td><span class="condition-badge ${ratingClass}">${ratingText}</span></td>
+                                        <td>${verdict}</td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            multiBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No forecast data available</td></tr>';
+                        }
+                    })
+                    .catch(err => console.error('Multi-day fetch error:', err));
                 
             } catch (error) {
                 console.error('Error:', error);
