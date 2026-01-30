@@ -84,6 +84,16 @@
         .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--border); }
         
+        .btn-surf {
+            background: linear-gradient(135deg, #00bfa5 0%, #0077be 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .btn-surf:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 191, 165, 0.4);
+        }
+        
         .hero {
             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
             padding: 3rem 2rem;
@@ -447,6 +457,11 @@
                 <div class="hero-stat-value" style="color: var(--warning);">{{ "%.0f"|format(stats.avg_risk) }}</div>
                 <div class="hero-stat-label">Avg Risk Score</div>
             </div>
+        </div>
+        <div style="margin-top: 2rem;">
+            <a href="/surf" class="btn btn-surf" style="padding: 0.75rem 2rem; font-size: 1rem; text-decoration: none; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem;">
+                🏄 Yali's Surf Forecast
+            </a>
         </div>
     </section>
     
