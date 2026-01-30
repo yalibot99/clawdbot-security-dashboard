@@ -863,10 +863,10 @@ def api_surf_forecast():
     spot_name = request.args.get('spot', 'Unknown Spot')
     
     if lat is None or lon is None:
-        # Default: Tel Aviv beach
-        lat = 32.0853
-        lon = 34.7818
-        spot_name = "Tel Aviv Beach"
+        return jsonify({'error': 'Missing lat/lon parameters'}), 400
+    
+    if lat < -90 or lat > 90 or lon < -180 or lon > 180:
+        return jsonify({'error': 'Invalid coordinates'}), 400
     
     forecast = get_surf_forecast(lat, lon)
     

@@ -320,6 +320,12 @@
             text-decoration: none;
             font-weight: 600;
         }
+        
+        /* Loading state */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -374,7 +380,7 @@
         <!-- Wind Summary -->
         <div class="summary-card">
             <div class="summary-title">💨 Wind Forecast</div>
-            <div class="summary-text" id="wind-summary">Loading...</div>
+            <div class="summary-text" id="wind-summary">Loading forecast...</div>
         </div>
         
         <!-- 3-Day Forecast -->
@@ -416,22 +422,49 @@
             return 'poor';
         }
         
+        function setLoading(isLoading) {
+            const el = document.body;
+            if (isLoading) {
+                el.classList.add('loading');
+            } else {
+                el.classList.remove('loading');
+            }
+        }
+        
         async function updateForecast() {
-            const lat = document.getElementById('lat').value;
-            const lon = document.getElementById('lon').value;
+            const latInput = document.getElementById('lat').value.trim();
+            const lonInput = document.getElementById('lon').value.trim();
+            
+            if (!latInput || !lonInput) {
+                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Please enter latitude and longitude</span>';
+                return;
+            }
+            
+            const lat = parseFloat(latInput);
+            const lon = parseFloat(lonInput);
+            
+            if (isNaN(lat) || isNaN(lon)) {
+                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Invalid coordinates</span>';
+                return;
+            }
             
             document.getElementById('spot-name').textContent = `${lat}, ${lon}`;
-            
-            // Update Windy link
             document.getElementById('windy-link').href = `https://www.windy.com/?${lat},${lon},8`;
             
+            setLoading(true);
+            
             try {
-                // Fetch forecast
+                // Fetch main forecast
                 const resp = await fetch(`/api/surf/forecast?lat=${lat}&lon=${lon}`);
+                
+                if (!resp.ok) {
+                    throw new Error('Failed to fetch forecast');
+                }
+                
                 const data = await resp.json();
                 
                 if (data.error) {
-                    alert(data.error);
+                    document.getElementById('wind-summary').innerHTML = `<span style="color: var(--poor);">${data.error}</span>`;
                     return;
                 }
                 
@@ -441,21 +474,25 @@
                     new Date(data.updated).toLocaleTimeString() : '--';
                 
                 // Update wind summary
-                document.getElementById('wind-summary').innerHTML = data.wind_summary || 'No data';
+                document.getElementById('wind-summary').innerHTML = data.wind_summary || 'No wind data available';
                 
                 // Update best time
                 if (data.best_time) {
                     const best = data.best_time;
-                    document.getElementById('best-time').textContent = best.time;
+                    document.getElementById('best-time').textContent = best.time || '--:--';
                     
-                    const rating = getRatingClass(best.score);
+                    const rating = getRatingClass(best.score || 0);
                     const ratingEl = document.getElementById('best-rating');
                     ratingEl.textContent = getRatingLabel(rating);
                     ratingEl.className = `best-rating rating-${rating}`;
                     
                     // Stats
-                    document.getElementById('stat-wind').textContent = `${best.wind_speed?.toFixed(0) || '--'}`;
+                    document.getElementById('stat-wind').textContent = best.wind_speed ? `${best.wind_speed.toFixed(0)}` : '--';
                     document.getElementById('stat-dir').textContent = best.wind_dir_name || '--';
+                } else {
+                    document.getElementById('best-time').textContent = '--:--';
+                    document.getElementById('best-rating').textContent = 'No data';
+                    document.getElementById('best-rating').className = 'best-rating rating-poor';
                 }
                 
                 // Hourly scroll
@@ -465,48 +502,64 @@
                 const morningSurf = data.morning_surf || [];
                 const allHours = data.all_hours || [];
                 
-                // Show best hours from morning + afternoon
-                const allWithScores = allHours.map((h, i) => ({
-                    ...h,
-                    score: morningSurf[i]?.score || 0
-                })).filter(h => h.wind_speed !== null);
+                // Create score lookup by hour
+                const scoreByHour = {};
+                morningSurf.forEach(h => {
+                    if (h && h.hour) {
+                        scoreByHour[h.hour] = h.score || 0;
+                    }
+                });
                 
-                const goodHours = allWithScores.filter(h => h.wind_speed >= 10 && h.wind_speed <= 40);
-                
-                // Count good hours
+                // Count good hours (10-40 km/h, 6AM-7PM)
+                const goodHours = allHours.filter(h => 
+                    h && h.wind_speed >= 10 && h.wind_speed <= 40 && 
+                    h.hour >= 6 && h.hour <= 19
+                );
                 document.getElementById('stat-hours').textContent = goodHours.length;
                 
                 // Show hours from 6 AM to 7 PM
-                const displayHours = allWithScores.filter(h => h.hour >= 6 && h.hour <= 19);
+                const displayHours = allHours.filter(h => h && h.hour >= 6 && h.hour <= 19 && h.wind_speed !== null);
                 
-                displayHours.forEach(h => {
-                    const chip = document.createElement('div');
-                    chip.className = `hour-chip ${getChipClass(h.score)}`;
-                    chip.innerHTML = `
-                        <div class="hour-time">${h.hour}:00</div>
-                        <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
-                        <div class="hour-dir">${h.wind_dir_name}</div>
-                    `;
-                    scrollEl.appendChild(chip);
-                });
+                if (displayHours.length === 0) {
+                    scrollEl.innerHTML = '<div class="hour-chip poor">No data</div>';
+                } else {
+                    displayHours.forEach(h => {
+                        const score = scoreByHour[h.hour] || 0;
+                        const chip = document.createElement('div');
+                        chip.className = `hour-chip ${getChipClass(score)}`;
+                        chip.innerHTML = `
+                            <div class="hour-time">${h.hour}:00</div>
+                            <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
+                            <div class="hour-dir">${h.wind_dir_name || '--'}</div>
+                        `;
+                        scrollEl.appendChild(chip);
+                    });
+                }
                 
                 // Fetch multi-day
                 const multiResp = await fetch(`/api/surf/multi-day?lat=${lat}&lon=${lon}`);
+                
+                if (!multiResp.ok) {
+                    throw new Error('Failed to fetch multi-day forecast');
+                }
+                
                 const multiData = await multiResp.json();
                 
                 // Update 3-day
                 const daysContainer = document.getElementById('days-container');
                 daysContainer.innerHTML = '';
                 
-                if (multiData.days && multiData.days.length > 0) {
+                if (!multiData.days || multiData.days.length === 0) {
+                    daysContainer.innerHTML = '<div class="day-card"><div class="day-info">No forecast data available</div></div>';
+                } else {
                     multiData.days.slice(0, 3).forEach((day, idx) => {
                         const date = new Date(day.date + 'T12:00:00');
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                         
-                        let rating = getRatingClass(day.score);
-                        let ratingText = getRatingLabel(rating);
+                        let rating = getRatingClass(day.score || 0);
+                        let ratingText = getRatingLabel(rating).split(' ')[0];
                         
-                        const isBest = idx === 0 && day.score > 20;
+                        const isBest = idx === 0 && (day.score || 0) > 20;
                         
                         const dayEl = document.createElement('div');
                         dayEl.className = `day-card ${isBest ? 'best' : ''}`;
@@ -514,9 +567,9 @@
                             <div class="day-icon">${isBest ? '🏆' : '🏄'}</div>
                             <div class="day-info">
                                 <div class="day-name">${dayName}</div>
-                                <div class="day-details">${day.good_hours} good hours · ${day.min_speed?.toFixed(0) || '--'}-${day.max_speed?.toFixed(0) || '--'} km/h</div>
+                                <div class="day-details">${day.good_hours || 0} good hours · ${(day.min_speed || 0).toFixed(0)}-${(day.max_speed || 0).toFixed(0)} km/h</div>
                             </div>
-                            <div class="day-rating rating-${rating}">${ratingText.split(' ')[0]}</div>
+                            <div class="day-rating rating-${rating}">${ratingText}</div>
                         `;
                         daysContainer.appendChild(dayEl);
                     });
@@ -524,9 +577,13 @@
                 
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Error loading data. Please try again.</span>';
+            } finally {
+                setLoading(false);
             }
         }
         
+        // Auto-load on page load
         document.addEventListener('DOMContentLoaded', updateForecast);
     </script>
 </body>
