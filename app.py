@@ -597,6 +597,160 @@ def api_security_summary():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ============ SURF FORECAST ENDPOINTS ============
+
+def get_surf_forecast(lat, lon, days=1):
+    """Fetch surf forecast from Open-Meteo Marine API."""
+    url = "https://marine-api.open-meteo.com/v1/marine"
+    params = {
+        'latitude': lat,
+        'longitude': lon,
+        'hourly': 'wave_height,wave_direction,wave_period,wind_wave_height,wind_direction_10m,wind_speed_10m',
+        'timezone': 'auto',
+        'forecast_days': days
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"Surf API error: {e}")
+        return None
+
+
+def analyze_surf_conditions(hourly_data, target_hour_start=6, target_hour_end=10):
+    """Find best surf time based on conditions."""
+    times = hourly_data.get('time', [])
+    wave_heights = hourly_data.get('wave_height', [])
+    wave_dirs = hourly_data.get('wave_direction', [])
+    wind_speeds = hourly_data.get('wind_speed_10m', [])
+    wind_dirs = hourly_data.get('wind_direction_10m', [])
+    wave_periods = hourly_data.get('wave_period', [])
+    
+    best_hours = []
+    
+    for i, time in enumerate(times):
+        hour = datetime.fromisoformat(time).hour
+        if hour < target_hour_start or hour >= target_hour_end:
+            continue
+        
+        wave_height = wave_heights[i] if i < len(wave_heights) and wave_heights[i] is not None else 0
+        wind_speed = wind_speeds[i] if i < len(wind_speeds) and wind_speeds[i] is not None else 0
+        wave_period = wave_periods[i] if i < len(wave_periods) and wave_periods[i] is not None else 0
+        
+        # Surf scoring (ideal conditions)
+        score = 0
+        
+        # Wave height: prefer 0.5m - 2.5m
+        if wave_height >= 0.5:
+            score += min(wave_height * 10, 25)
+        else:
+            score -= 10
+        
+        # Wind: prefer under 15 km/h offshore or light
+        if wind_speed < 15:
+            score += 20
+        elif wind_speed < 25:
+            score += 10
+        else:
+            score -= 20
+        
+        # Wave period: longer is better (more powerful waves)
+        if wave_period >= 10:
+            score += 15
+        elif wave_period >= 7:
+            score += 5
+        
+        best_hours.append({
+            'time': time,
+            'hour': hour,
+            'wave_height': wave_height,
+            'wave_direction': wave_dirs[i] if i < len(wave_dirs) else None,
+            'wind_speed': wind_speed,
+            'wind_direction': wind_dirs[i] if i < len(wind_dirs) else None,
+            'wave_period': wave_period,
+            'score': score
+        })
+    
+    # Sort by score
+    best_hours.sort(key=lambda x: x['score'], reverse=True)
+    return best_hours
+
+
+@app.route('/surf')
+def surf_dashboard():
+    """Surf forecast dashboard."""
+    return render_template('dashboard.html', surf_mode=True)
+
+
+@app.route('/api/surf/forecast')
+def api_surf_forecast():
+    """Get surf forecast for a location."""
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
+    spot_name = request.args.get('spot', 'Unknown Spot')
+    
+    if lat is None or lon is None:
+        # Default: Tel Aviv beach
+        lat = 32.0853
+        lon = 34.7818
+        spot_name = "Tel Aviv Beach"
+    
+    forecast = get_surf_forecast(lat, lon)
+    
+    if not forecast:
+        return jsonify({'error': 'Failed to fetch forecast'}), 500
+    
+    # Analyze for morning surf (6-10 AM)
+    hourly = forecast.get('hourly', {})
+    morning_surf = analyze_surf_conditions(hourly, target_hour_start=6, target_hour_end=10)
+    
+    # Get tomorrow's data if available
+    tomorrow_data = []
+    if morning_surf:
+        # Group by date
+        for entry in morning_surf:
+            date = entry['time'][:10]
+            if date not in [d.get('date') for d in tomorrow_data]:
+                tomorrow_data.append({
+                    'date': date,
+                    'best_time': entry['time'][11:16],
+                    'wave_height': entry['wave_height'],
+                    'wind_speed': entry['wind_speed'],
+                    'score': entry['score'],
+                    'conditions': '🔥 Great' if entry['score'] > 40 else ('✅ Good' if entry['score'] > 20 else ('⚠️ Fair' if entry['score'] > 0 else '❌ Poor'))
+                })
+    
+    return jsonify({
+        'spot': spot_name,
+        'location': {'lat': lat, 'lon': lon},
+        'forecast_days': forecast.get('daily', {}).get('time', [])[:1],
+        'morning_surf': morning_surf[:5] if morning_surf else [],
+        'best_time_tomorrow': tomorrow_data[0] if tomorrow_data else None,
+        'generated': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/surf/conditions')
+def api_surf_conditions():
+    """Get detailed surf conditions."""
+    lat = request.args.get('lat', 32.0853, type=float)
+    lon = request.args.get('lon', 34.7818, type=float)
+    
+    forecast = get_surf_forecast(lat, lon, days=2)
+    
+    if not forecast:
+        return jsonify({'error': 'Failed to fetch conditions'}), 500
+    
+    return jsonify({
+        'hourly': forecast.get('hourly', {}),
+        'timezone': forecast.get('timezone'),
+        'generated': datetime.now().isoformat()
+    })
+
+
 if __name__ == '__main__':
     print("🚀 Dashboard starting at http://localhost:5000")
     print("🎯 Clawdbot Security Intelligence Dashboard")
