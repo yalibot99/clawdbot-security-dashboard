@@ -953,8 +953,14 @@ def api_surf_conditions():
 @app.route('/api/surf/multi-day')
 def api_surf_multi_day():
     """Get 3-day surf forecast comparison."""
-    lat = request.args.get('lat', 32.0853, type=float)
-    lon = request.args.get('lon', 34.7818, type=float)
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
+    
+    if lat is None or lon is None:
+        return jsonify({'error': 'Missing lat/lon parameters'}), 400
+    
+    if lat < -90 or lat > 90 or lon < -180 or lon > 180:
+        return jsonify({'error': 'Invalid coordinates'}), 400
     
     forecast = get_multi_day_forecast(lat, lon, days=3)
     
