@@ -216,6 +216,27 @@
             font-size: 0.8rem;
         }
         
+        .source-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        
+        .source-info strong { color: var(--accent); }
+        
+        .wind-summary {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+        
+        .wind-summary strong {
+            color: var(--accent);
+        }
+        
         .back-link {
             display: inline-block;
             margin-bottom: 1rem;
@@ -279,7 +300,7 @@
         </div>
         
         <div class="why-section">
-            <h3>📋 Hourly Forecast</h3>
+            <h3>📋 Hourly Forecast (Morning 6-10 AM)</h3>
             <table class="forecast-table">
                 <thead>
                     <tr>
@@ -293,6 +314,33 @@
                     <tr><td colspan="4" style="text-align: center;">Loading...</td></tr>
                 </tbody>
             </table>
+        </div>
+        
+        <div class="why-section" id="wind-summary-section">
+            <h3>💨 Wind Conditions Today</h3>
+            <p id="wind-summary-text" class="wind-summary">Loading...</p>
+        </div>
+        
+        <div class="why-section">
+            <h3>📊 All Day Wind Forecast</h3>
+            <table class="forecast-table" id="all-hours-table">
+                <thead>
+                    <tr>
+                        <th>Hour</th>
+                        <th>Wind Speed</th>
+                        <th>Direction</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody id="all-hours-body">
+                    <tr><td colspan="4" style="text-align: center;">Loading full day forecast...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="source-info" id="source-info">
+            <strong>Data:</strong> <span id="data-source">Loading...</span><br>
+            <strong>Updated:</strong> <span id="data-updated">Loading...</span>
         </div>
     </div>
     
@@ -318,40 +366,38 @@
                     return;
                 }
                 
+                // Update source info
+                document.getElementById('data-source').textContent = data.source || 'Unknown';
+                document.getElementById('data-updated').textContent = data.updated ? new Date(data.updated).toLocaleString() : 'Unknown';
+                
+                // Update wind summary
+                document.getElementById('wind-summary-text').innerHTML = data.wind_summary || 'No wind data available.';
+                
                 // Update best time
-                if (data.best_time_tomorrow) {
-                    const best = data.best_time_tomorrow;
-                    document.getElementById('best-hour').textContent = best.best_time;
+                if (data.best_time) {
+                    const best = data.best_time;
+                    document.getElementById('best-hour').textContent = best.time;
                     document.getElementById('best-conditions').textContent = best.conditions;
                     
-                    // Get detailed data for best time
-                    const bestEntry = data.morning_surf.find(e => e.hour === parseInt(best.best_time.split(':')[0]));
-                    if (bestEntry) {
-                        document.getElementById('wind-speed').textContent = `${bestEntry.wind_speed?.toFixed(0) || '--'} km/h`;
-                        document.getElementById('wave-height').textContent = `${bestEntry.wave_height?.toFixed(1) || '--'}m`;
-                        document.getElementById('foil-score').textContent = best.score?.toFixed(0) || '--';
-                        
-                        // Wind direction
-                        const wd = bestEntry.wind_direction;
-                        let wdText = '--';
-                        if (wd !== null && wd !== undefined) {
-                            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                            wdText = dirs[Math.round(wd / 45) % 8];
-                        }
-                        document.getElementById('wind-dir').textContent = wdText;
-                        
-                        // Generate why text
-                        generateWhyText(bestEntry);
-                    }
+                    document.getElementById('wind-speed').textContent = `${best.wind_speed?.toFixed(0) || '--'} km/h`;
+                    document.getElementById('wave-height').textContent = `${best.wave_height?.toFixed(1) || '--'}m`;
+                    document.getElementById('foil-score').textContent = best.score?.toFixed(0) || '--';
+                    document.getElementById('wind-dir').textContent = best.wind_dir_name || '--';
+                    
+                    // Generate why text
+                    generateWhyText({
+                        wind_speed: best.wind_speed,
+                        wind_direction: best.wind_direction,
+                        wave_height: best.wave_height
+                    });
                 }
                 
-                // Update table
+                // Update morning table
                 const tbody = document.getElementById('forecast-body');
                 tbody.innerHTML = '';
                 
                 if (data.morning_surf && data.morning_surf.length > 0) {
                     data.morning_surf.forEach(entry => {
-                        // Wind rating
                         let windClass = 'wind-bad';
                         let windText = '❌';
                         if (entry.wind_speed >= 15 && entry.wind_speed <= 40) {
@@ -362,7 +408,6 @@
                             windText = '⚠️ OK';
                         }
                         
-                        // Wave rating (lower is better for wing foil)
                         let waveClass = 'wave-low';
                         let waveText = '✅ Calm';
                         if (entry.wave_height > 1.0) {
@@ -389,7 +434,40 @@
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No data available</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No morning data available</td></tr>';
+                }
+                
+                // Update ALL hours table
+                const allHoursBody = document.getElementById('all-hours-body');
+                allHoursBody.innerHTML = '';
+                
+                if (data.all_hours && data.all_hours.length > 0) {
+                    data.all_hours.forEach(entry => {
+                        // Wind rating
+                        let windClass = 'wind-bad';
+                        let windText = '❌ Light';
+                        if (entry.wind_speed >= 40) {
+                            windClass = 'wind-bad';
+                            windText = '💨 Strong';
+                        } else if (entry.wind_speed >= 15) {
+                            windClass = 'wind-good';
+                            windText = '✅ Good';
+                        } else if (entry.wind_speed >= 10) {
+                            windClass = 'wind-fair';
+                            windText = '⚠️ Light';
+                        }
+                        
+                        allHoursBody.innerHTML += `
+                            <tr>
+                                <td>${entry.hour}:00</td>
+                                <td>${entry.wind_speed?.toFixed(1) || '--'} km/h</td>
+                                <td>${entry.wind_dir_name || '--'}</td>
+                                <td><span class="wind-indicator ${windClass}">${windText}</span></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    allHoursBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hourly data available</td></tr>';
                 }
                 
             } catch (error) {

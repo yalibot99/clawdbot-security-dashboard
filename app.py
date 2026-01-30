@@ -601,23 +601,108 @@ def api_security_summary():
 # ============ SURF FORECAST ENDPOINTS ============
 
 def get_surf_forecast(lat, lon, days=1):
-    """Fetch surf forecast from Open-Meteo Marine API."""
-    url = "https://marine-api.open-meteo.com/v1/marine"
-    params = {
+    """Fetch surf forecast from Open-Meteo APIs (Marine + Weather for wind)."""
+    # Get marine data (waves)
+    marine_url = "https://marine-api.open-meteo.com/v1/marine"
+    marine_params = {
         'latitude': lat,
         'longitude': lon,
-        'hourly': 'wave_height,wave_direction,wave_period,wind_wave_height,wind_direction_10m,wind_speed_10m',
+        'hourly': 'wave_height,wave_direction,wave_period,wind_wave_height',
+        'timezone': 'auto',
+        'forecast_days': days
+    }
+    
+    # Get weather data (wind)
+    weather_url = "https://api.open-meteo.com/v1/forecast"
+    weather_params = {
+        'latitude': lat,
+        'longitude': lon,
+        'hourly': 'wind_speed_10m,wind_direction_10m,wind_gusts_10m',
         'timezone': 'auto',
         'forecast_days': days
     }
     
     try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
+        # Fetch both
+        marine_resp = requests.get(marine_url, params=marine_params, timeout=10)
+        marine_resp.raise_for_status()
+        marine_data = marine_resp.json()
+        
+        weather_resp = requests.get(weather_url, params=weather_params, timeout=10)
+        weather_resp.raise_for_status()
+        weather_data = weather_resp.json()
+        
+        # Merge wind data into marine data
+        marine_data['hourly']['wind_speed_10m'] = weather_data['hourly'].get('wind_speed_10m', [])
+        marine_data['hourly']['wind_direction_10m'] = weather_data['hourly'].get('wind_direction_10m', [])
+        marine_data['hourly']['wind_gusts_10m'] = weather_data['hourly'].get('wind_gusts_10m', [])
+        
+        # Add metadata
+        marine_data['_source'] = 'Open-Meteo (Marine + Weather APIs, free)'
+        marine_data['_updated'] = datetime.now().isoformat()
+        
+        return marine_data
     except Exception as e:
         logger.error(f"Surf API error: {e}")
         return None
+
+
+def wind_direction_name(degrees):
+    """Convert wind direction in degrees to compass name."""
+    if degrees is None:
+        return '--'
+    dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 
+            'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+    index = round(degrees / 22.5) % 16
+    return dirs[index]
+
+
+def generate_wind_summary(hourly_data):
+    """Generate a paragraph describing wind conditions throughout the day."""
+    times = hourly_data.get('time', [])
+    wind_speeds = hourly_data.get('wind_speed_10m', [])
+    
+    if not wind_speeds:
+        return "No wind data available."
+    
+    # Find periods (handle None values)
+    periods = []
+    for i, speed in enumerate(wind_speeds):
+        if i >= len(times):
+            break
+        if speed is None:
+            continue
+        hour = datetime.fromisoformat(times[i]).hour
+        periods.append({'hour': hour, 'speed': speed})
+    
+    if not periods:
+        return "No wind data available."
+    
+    # Analyze
+    light_wind = [(p['hour'], p['speed']) for p in periods if p['speed'] < 10]
+    good_wind = [(p['hour'], p['speed']) for p in periods if 10 <= p['speed'] <= 40]
+    strong_wind = [(p['hour'], p['speed']) for p in periods if p['speed'] > 40]
+    
+    summary_parts = []
+    
+    if good_wind:
+        good_hours = [h for h, s in good_wind]
+        start_hour = min(good_hours)
+        end_hour = max(good_hours)
+        summary_parts.append(f"💨 Good wing foil conditions ({start_hour}:00-{end_hour}:00) when wind is 10-40 km/h.")
+    
+    if light_wind:
+        light_hours = [h for h, s in light_wind]
+        summary_parts.append(f"🕊️ Light winds under 10 km/h at {', '.join(str(h) for h in light_hours)} — too light for foiling.")
+    
+    if strong_wind:
+        strong_hours = [h for h, s in strong_wind]
+        summary_parts.append(f"⚠️ Strong winds over 40 km/h at {', '.join(str(h) for h in strong_hours)} — advanced conditions only.")
+    
+    if not summary_parts:
+        return "Variable wind conditions today. Check the hourly table for details."
+    
+    return ' '.join(summary_parts)
 
 
 def analyze_surf_conditions(hourly_data, target_hour_start=6, target_hour_end=10):
@@ -713,32 +798,61 @@ def api_surf_forecast():
     if not forecast:
         return jsonify({'error': 'Failed to fetch forecast'}), 500
     
+    # Extract metadata
+    source = forecast.get('_source', 'Open-Meteo Marine API')
+    updated = forecast.get('_updated', datetime.now().isoformat())
+    timezone = forecast.get('timezone', 'UTC')
+    
     # Analyze for morning surf (6-10 AM)
     hourly = forecast.get('hourly', {})
     morning_surf = analyze_surf_conditions(hourly, target_hour_start=6, target_hour_end=10)
     
-    # Get tomorrow's data if available
-    tomorrow_data = []
+    # Get ALL hourly wind data for the day
+    all_hours = []
+    times = hourly.get('time', [])
+    wind_speeds = hourly.get('wind_speed_10m', [])
+    wind_dirs = hourly.get('wind_direction_10m', [])
+    
+    for i, time in enumerate(times):
+        hour = datetime.fromisoformat(time).hour
+        speed = wind_speeds[i] if i < len(wind_speeds) else None
+        direction = wind_dirs[i] if i < len(wind_dirs) else None
+        
+        all_hours.append({
+            'time': time,
+            'hour': hour,
+            'wind_speed': speed,
+            'wind_direction': direction,
+            'wind_dir_name': wind_direction_name(direction)
+        })
+    
+    # Generate wind summary
+    wind_summary = generate_wind_summary(hourly)
+    
+    # Get best time
+    best_time = None
     if morning_surf:
-        # Group by date
-        for entry in morning_surf:
-            date = entry['time'][:10]
-            if date not in [d.get('date') for d in tomorrow_data]:
-                tomorrow_data.append({
-                    'date': date,
-                    'best_time': entry['time'][11:16],
-                    'wave_height': entry['wave_height'],
-                    'wind_speed': entry['wind_speed'],
-                    'score': entry['score'],
-                    'conditions': '🔥 Great' if entry['score'] > 40 else ('✅ Good' if entry['score'] > 20 else ('⚠️ Fair' if entry['score'] > 0 else '❌ Poor'))
-                })
+        best = morning_surf[0]
+        best_time = {
+            'time': best['time'][11:16],
+            'wave_height': best['wave_height'],
+            'wind_speed': best['wind_speed'],
+            'wind_direction': best['wind_direction'],
+            'wind_dir_name': wind_direction_name(best.get('wind_direction')),
+            'score': best['score'],
+            'conditions': '🔥 Great' if best['score'] > 40 else ('✅ Good' if best['score'] > 20 else ('⚠️ Fair' if best['score'] > 0 else '❌ Poor'))
+        }
     
     return jsonify({
         'spot': spot_name,
         'location': {'lat': lat, 'lon': lon},
-        'forecast_days': forecast.get('daily', {}).get('time', [])[:1],
+        'source': source,
+        'updated': updated,
+        'timezone': timezone,
         'morning_surf': morning_surf[:5] if morning_surf else [],
-        'best_time_tomorrow': tomorrow_data[0] if tomorrow_data else None,
+        'all_hours': all_hours,
+        'best_time': best_time,
+        'wind_summary': wind_summary,
         'generated': datetime.now().isoformat()
     })
 
