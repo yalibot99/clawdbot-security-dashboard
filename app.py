@@ -679,6 +679,50 @@ def get_multi_day_forecast(lat, lon, days=3):
         return None
 
 
+# Cache file paths
+CACHE_DIR = 'static/data'
+FORECAST_CACHE_FILE = os.path.join(CACHE_DIR, 'surf_forecast_cache.json')
+MULTI_DAY_CACHE_FILE = os.path.join(CACHE_DIR, 'multi_day_cache.json')
+
+
+def save_to_cache(data, cache_file):
+    """Save data to cache file."""
+    try:
+        os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+        with open(cache_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Saved forecast to cache: {cache_file}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save cache: {e}")
+        return False
+
+
+def load_from_cache(cache_file, max_age_hours=24):
+    """Load data from cache file if it's not too old."""
+    try:
+        if not os.path.exists(cache_file):
+            return None
+        
+        # Check file age
+        file_mtime = os.path.getmtime(cache_file)
+        file_age_hours = (datetime.now().timestamp() - file_mtime) / 3600
+        
+        if file_age_hours > max_age_hours:
+            logger.info(f"Cache file too old: {cache_file} ({file_age_hours:.1f}h)")
+            return None
+        
+        with open(cache_file, 'r') as f:
+            data = json.load(f)
+            data['_cached'] = True
+            data['_cache_age_hours'] = file_age_hours
+            logger.info(f"Loaded forecast from cache: {cache_file} ({file_age_hours:.1f}h old)")
+            return data
+    except Exception as e:
+        logger.error(f"Failed to load cache: {e}")
+        return None
+
+
 def get_surf_forecast(lat, lon, days=1):
     """Fetch surf forecast from Open-Meteo APIs (Marine + Weather for wind)."""
     headers = {
@@ -724,6 +768,10 @@ def get_surf_forecast(lat, lon, days=1):
         # Add metadata
         marine_data['_source'] = 'Open-Meteo (Marine + Weather APIs, free)'
         marine_data['_updated'] = datetime.now().isoformat()
+        marine_data['_cached'] = False
+        
+        # Save to cache
+        save_to_cache(marine_data, FORECAST_CACHE_FILE)
         
         return marine_data
     except requests.exceptions.Timeout:
@@ -883,43 +931,67 @@ def api_surf_forecast():
     if lat < -90 or lat > 90 or lon < -180 or lon > 180:
         return jsonify({'error': 'Invalid coordinates'}), 400
     
-    forecast = get_surf_forecast(lat, lon)
+    # Check cache FIRST to avoid rate limiting
+    forecast = load_from_cache(FORECAST_CACHE_FILE, max_age_hours=2)
     
-    if not forecast:
-        # Try single API as fallback
-        try:
-            headers = {'User-Agent': 'Ayali-WingFoil-Forecast/1.0'}
-            weather_url = "https://api.open-meteo.com/v1/forecast"
-            weather_params = {
-                'latitude': lat,
-                'longitude': lon,
-                'hourly': 'wind_speed_10m,wind_direction_10m,wave_height',
-                'timezone': 'auto',
-                'forecast_days': 1
-            }
-            weather_resp = requests.get(weather_url, params=weather_params, headers=headers, timeout=30)
-            weather_resp.raise_for_status()
-            weather_data = weather_resp.json()
-            
-            # Use weather data directly
-            forecast = {
-                'hourly': {
-                    'time': weather_data.get('hourly', {}).get('time', []),
-                    'wave_height': weather_data.get('hourly', {}).get('wave_height', []),
-                    'wind_speed_10m': weather_data.get('hourly', {}).get('wind_speed_10m', []),
-                    'wind_direction_10m': weather_data.get('hourly', {}).get('wind_direction_10m', []),
-                },
-                '_source': 'Open-Meteo Weather API (fallback)',
-                '_updated': datetime.now().isoformat()
-            }
-        except Exception as fallback_error:
-            logger.error(f"Fallback also failed: {fallback_error}")
-            return jsonify({'error': f'Failed to fetch forecast. Debug: {str(fallback_error)[:100]}'}), 500
+    if forecast:
+        logger.info("Using cached forecast data")
+        forecast['_source'] = forecast.get('_source', 'Cached') + ' (fresh)'
+    else:
+        # Cache miss - fetch from API
+        forecast = get_surf_forecast(lat, lon)
+        
+        if not forecast:
+            # Try fallback API
+            try:
+                headers = {'User-Agent': 'Ayali-WingFoil-Forecast/1.0'}
+                weather_url = "https://api.open-meteo.com/v1/forecast"
+                weather_params = {
+                    'latitude': lat,
+                    'longitude': lon,
+                    'hourly': 'wind_speed_10m,wind_direction_10m,wave_height',
+                    'timezone': 'auto',
+                    'forecast_days': 1
+                }
+                weather_resp = requests.get(weather_url, params=weather_params, headers=headers, timeout=30)
+                weather_resp.raise_for_status()
+                weather_data = weather_resp.json()
+                
+                forecast = {
+                    'hourly': {
+                        'time': weather_data.get('hourly', {}).get('time', []),
+                        'wave_height': weather_data.get('hourly', {}).get('wave_height', []),
+                        'wind_speed_10m': weather_data.get('hourly', {}).get('wind_speed_10m', []),
+                        'wind_direction_10m': weather_data.get('hourly', {}).get('wind_direction_10m', []),
+                    },
+                    '_source': 'Open-Meteo Weather API (fallback)',
+                    '_updated': datetime.now().isoformat(),
+                    '_cached': False
+                }
+                save_to_cache(forecast, FORECAST_CACHE_FILE)
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
+                
+                # Try loading from cache (even old cache)
+                forecast = load_from_cache(FORECAST_CACHE_FILE, max_age_hours=168)  # Up to 1 week old
+                
+                if forecast:
+                    logger.info("Using old cached forecast data")
+                    forecast['_source'] = forecast.get('_source', 'Cached') + ' (stale)'
+                else:
+                    return jsonify({'error': 'Failed to fetch forecast and no cached data available'}), 500
     
     # Extract metadata
     source = forecast.get('_source', 'Open-Meteo Marine API')
     updated = forecast.get('_updated', datetime.now().isoformat())
+    is_cached = forecast.get('_cached', False)
+    cache_age = forecast.get('_cache_age_hours', 0)
+    
     timezone = forecast.get('timezone', 'UTC')
+    
+    # Add note about cached data
+    if is_cached:
+        source = f"{source} (cached {cache_age:.1f}h ago)"
     
     # Analyze for morning surf (6-10 AM)
     hourly = forecast.get('hourly', {})
@@ -967,6 +1039,8 @@ def api_surf_forecast():
         'source': source,
         'updated': updated,
         'timezone': timezone,
+        'is_cached': is_cached,
+        'cache_age_hours': round(cache_age, 1) if is_cached else 0,
         'morning_surf': morning_surf[:5] if morning_surf else [],
         'all_hours': all_hours,
         'best_time': best_time,
@@ -1005,10 +1079,25 @@ def api_surf_multi_day():
     if lat < -90 or lat > 90 or lon < -180 or lon > 180:
         return jsonify({'error': 'Invalid coordinates'}), 400
     
-    forecast = get_multi_day_forecast(lat, lon, days=3)
+    # Check cache FIRST to avoid rate limiting
+    forecast = load_from_cache(MULTI_DAY_CACHE_FILE, max_age_hours=6)
     
-    if not forecast:
-        return jsonify({'error': 'Failed to fetch multi-day forecast'}), 500
+    if forecast:
+        logger.info("Using cached multi-day forecast")
+        forecast['source'] = forecast.get('source', 'Cached') + ' (fresh)'
+    else:
+        # Cache miss - fetch from API
+        forecast = get_multi_day_forecast(lat, lon, days=3)
+        
+        if not forecast:
+            # Try loading old cache
+            forecast = load_from_cache(MULTI_DAY_CACHE_FILE, max_age_hours=168)
+            if forecast:
+                forecast['source'] = forecast.get('source', 'Cached') + ' (stale)'
+            else:
+                return jsonify({'error': 'Failed to fetch multi-day forecast'}), 500
+        else:
+            save_to_cache(forecast, MULTI_DAY_CACHE_FILE)
     
     # Add recommendations
     if forecast['daily']:
