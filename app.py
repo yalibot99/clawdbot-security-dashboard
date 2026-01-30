@@ -682,7 +682,7 @@ def analyze_surf_conditions(hourly_data, target_hour_start=6, target_hour_end=10
 @app.route('/surf')
 def surf_dashboard():
     """Surf forecast dashboard."""
-    return render_template('dashboard.html', surf_mode=True)
+    return render_template('surf.html')
 
 
 @app.route('/api/surf/forecast')
