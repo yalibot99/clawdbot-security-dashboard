@@ -640,26 +640,36 @@ def analyze_surf_conditions(hourly_data, target_hour_start=6, target_hour_end=10
         wind_speed = wind_speeds[i] if i < len(wind_speeds) and wind_speeds[i] is not None else 0
         wave_period = wave_periods[i] if i < len(wave_periods) and wave_periods[i] is not None else 0
         
-        # Surf scoring (ideal conditions)
+        # WING FOIL SCORING (wind-focused, low waves preferred)
         score = 0
         
-        # Wave height: prefer 0.5m - 2.5m
-        if wave_height >= 0.5:
-            score += min(wave_height * 10, 25)
-        else:
-            score -= 10
+        # Wind: WING FOIL NEEDS 15-40 km/h (CRITICAL)
+        if 15 <= wind_speed <= 40:
+            # Sweet spot for wing foil
+            if 20 <= wind_speed <= 35:
+                score += 50  # Perfect!
+            else:
+                score += 40  # Good
+        elif 10 <= wind_speed < 15:
+            score += 20  # Light but possible
+        elif wind_speed < 10:
+            score -= 30  # Too light - no lift
+        else:  # wind_speed > 40
+            score -= 20  # Too strong - dangerous
         
-        # Wind: prefer under 15 km/h offshore or light
-        if wind_speed < 15:
-            score += 20
-        elif wind_speed < 25:
-            score += 10
-        else:
-            score -= 20
+        # Waves: LOWER is better for wing foil (stability)
+        if wave_height <= 0.3:
+            score += 25  # Perfectly calm
+        elif wave_height <= 0.6:
+            score += 15  # Manageable
+        elif wave_height <= 1.0:
+            score += 0  # OK
+        else:  # wave_height > 1.0
+            score -= 30  # Too choppy - destabilizes foil
         
-        # Wave period: longer is better (more powerful waves)
+        # Wave period: longer = smoother rides
         if wave_period >= 10:
-            score += 15
+            score += 10
         elif wave_period >= 7:
             score += 5
         

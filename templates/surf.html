@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏄 Yali's Surf Forecast</title>
+    <title>🏄‍♂️ Ayali's Wing Foil Forecast</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -16,6 +16,7 @@
             --accent-dark: #00bfa5;
             --ocean: #0077be;
             --waves: #00a8cc;
+            --wind: #a8dadc;
             --danger: #ff6b6b;
             --warning: #ffd93d;
             --success: #6bcb77;
@@ -24,26 +25,26 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--ocean) 100%);
+            background: linear-gradient(180deg, var(--bg-primary) 0%, var(--ocean) 100%);
             color: var(--text-primary);
             font-family: 'Segoe UI', system-ui, sans-serif;
             min-height: 100vh;
-            padding: 2rem;
+            padding: 1.5rem;
         }
         
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 800px; margin: 0 auto; }
         
         .header {
             text-align: center;
-            margin-bottom: 2rem;
-            padding: 2rem;
-            background: rgba(17, 34, 64, 0.8);
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(17, 34, 64, 0.85);
             border-radius: 16px;
             backdrop-filter: blur(10px);
         }
         
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             margin-bottom: 0.5rem;
         }
         
@@ -54,63 +55,64 @@
             align-items: center;
             gap: 0.5rem;
             background: var(--bg-tertiary);
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem;
             border-radius: 20px;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        .spot-input {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
             margin-top: 1rem;
+            flex-wrap: wrap;
         }
         
-        .spot-selector {
-            margin-top: 1rem;
-        }
-        
-        .spot-selector label {
-            margin-right: 0.5rem;
-            color: var(--text-secondary);
-        }
-        
-        .spot-selector input {
-            padding: 0.5rem;
+        .spot-input input {
+            padding: 0.4rem 0.8rem;
             border-radius: 8px;
             border: 1px solid var(--text-secondary);
             background: var(--bg-primary);
             color: var(--text-primary);
-            width: 200px;
+            width: 120px;
+            font-size: 0.9rem;
         }
         
-        .spot-selector button {
-            padding: 0.5rem 1rem;
+        .spot-input button {
+            padding: 0.4rem 1rem;
             border-radius: 8px;
             border: none;
             background: var(--accent);
             color: var(--bg-primary);
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.9rem;
         }
         
         .best-time {
             background: linear-gradient(135deg, var(--accent) 0%, var(--ocean) 100%);
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 16px;
             text-align: center;
-            margin: 2rem 0;
+            margin: 1.5rem 0;
         }
         
         .best-time h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
             opacity: 0.9;
         }
         
         .best-time .time {
-            font-size: 4rem;
+            font-size: 3rem;
             font-weight: 800;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
         .best-time .conditions {
-            font-size: 1.25rem;
+            font-size: 1rem;
             margin-top: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem;
             background: rgba(255,255,255,0.2);
             border-radius: 8px;
             display: inline-block;
@@ -118,46 +120,83 @@
         
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin: 2rem 0;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin: 1rem 0;
         }
         
         .metric-card {
-            background: rgba(17, 34, 64, 0.8);
-            padding: 1.5rem;
+            background: rgba(17, 34, 64, 0.85);
+            padding: 1rem;
             border-radius: 12px;
             text-align: center;
-            backdrop-filter: blur(10px);
         }
         
         .metric-card .value {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--accent);
         }
         
         .metric-card .label {
             color: var(--text-secondary);
-            margin-top: 0.5rem;
+            margin-top: 0.25rem;
+            font-size: 0.85rem;
         }
         
-        .wave-chart {
-            background: rgba(17, 34, 64, 0.8);
-            padding: 1.5rem;
+        .why-section {
+            background: rgba(17, 34, 64, 0.85);
+            padding: 1.25rem;
             border-radius: 12px;
-            margin: 2rem 0;
+            margin: 1.5rem 0;
         }
+        
+        .why-section h3 {
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+        
+        .why-section p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .wind-indicator {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .wind-good { background: var(--success); color: var(--bg-primary); }
+        .wind-fair { background: var(--warning); color: var(--bg-primary); }
+        .wind-bad { background: var(--danger); color: white; }
+        
+        .wave-indicator {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .wave-low { background: var(--success); color: var(--bg-primary); }
+        .wave-med { background: var(--warning); color: var(--bg-primary); }
+        .wave-high { background: var(--danger); color: white; }
         
         .forecast-table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
+            font-size: 0.9rem;
         }
         
         .forecast-table th,
         .forecast-table td {
-            padding: 1rem;
+            padding: 0.75rem;
             text-align: left;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
@@ -165,25 +204,15 @@
         .forecast-table th {
             color: var(--text-secondary);
             font-weight: 600;
+            font-size: 0.8rem;
         }
-        
-        .condition-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-        
-        .condition-great { background: var(--success); color: var(--bg-primary); }
-        .condition-good { background: var(--accent); color: var(--bg-primary); }
-        .condition-fair { background: var(--warning); color: var(--bg-primary); }
-        .condition-poor { background: var(--danger); color: white; }
         
         .back-link {
             display: inline-block;
             margin-bottom: 1rem;
             color: var(--text-secondary);
             text-decoration: none;
+            font-size: 0.9rem;
         }
         
         .back-link:hover { color: var(--accent); }
@@ -194,73 +223,68 @@
         <a href="/" class="back-link">← Back to Security Dashboard</a>
         
         <div class="header">
-            <h1>🏄 <span>Yali's</span> Surf Forecast</h1>
+            <h1>🏄‍♂️ Ayali's <span>Wing Foil</span> Forecast</h1>
             <div class="location-badge">
                 📍 <span id="spot-name">Tel Aviv Beach</span>
                 <span id="coords">(32.0853, 34.7818)</span>
             </div>
             
-            <div class="spot-selector">
-                <label>Or enter location:</label>
-                <input type="text" id="lat" placeholder="Latitude" value="32.0853">
-                <input type="text" id="lon" placeholder="Longitude" value="34.7818">
+            <div class="spot-input">
+                <input type="text" id="lat" placeholder="Lat" value="32.0853">
+                <input type="text" id="lon" placeholder="Lon" value="34.7818">
                 <button onclick="updateForecast()">Get Forecast</button>
             </div>
         </div>
         
         <div class="best-time" id="best-time">
-            <h2>🌊 Best Time to Surf Tomorrow Morning</h2>
+            <h2>🌊 Best Time for Wing Foil Tomorrow</h2>
             <div class="time" id="best-hour">--:--</div>
             <div class="conditions" id="best-conditions">Loading...</div>
         </div>
         
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="value" id="wave-height">--</div>
-                <div class="label">🌊 Wave Height (m)</div>
-            </div>
-            <div class="metric-card">
                 <div class="value" id="wind-speed">--</div>
                 <div class="label">💨 Wind (km/h)</div>
             </div>
             <div class="metric-card">
-                <div class="value" id="wave-period">--</div>
-                <div class="label">⏱️ Wave Period (s)</div>
+                <div class="value" id="wind-dir">--</div>
+                <div class="label">🧭 Wind Direction</div>
             </div>
             <div class="metric-card">
-                <div class="value" id="surf-score">--</div>
-                <div class="label">🔥 Surf Score</div>
+                <div class="value" id="wave-height">--</div>
+                <div class="label">🌊 Wave Height</div>
+            </div>
+            <div class="metric-card">
+                <div class="value" id="foil-score">--</div>
+                <div class="label">🔥 Foil Score</div>
             </div>
         </div>
         
-        <div class="wave-chart">
-            <h3>📊 Hourly Forecast (6-10 AM)</h3>
-            <canvas id="waveChart"></canvas>
+        <div class="why-section" id="why-section">
+            <h3>📝 Why This is the Best Time</h3>
+            <p id="why-text">Loading analysis...</p>
         </div>
         
-        <div class="wave-chart">
-            <h3>📋 Detailed Forecast</h3>
+        <div class="why-section">
+            <h3>📋 Hourly Forecast</h3>
             <table class="forecast-table">
                 <thead>
                     <tr>
                         <th>Time</th>
-                        <th>Wave Height</th>
                         <th>Wind</th>
-                        <th>Period</th>
+                        <th>Waves</th>
                         <th>Score</th>
-                        <th>Conditions</th>
                     </tr>
                 </thead>
                 <tbody id="forecast-body">
-                    <tr><td colspan="6" style="text-align: center;">Loading forecast...</td></tr>
+                    <tr><td colspan="4" style="text-align: center;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
     
     <script>
-        let waveChart = null;
-        
         async function updateForecast() {
             const lat = document.getElementById('lat').value;
             const lon = document.getElementById('lon').value;
@@ -279,15 +303,29 @@
                 
                 // Update best time
                 if (data.best_time_tomorrow) {
-                    document.getElementById('best-hour').textContent = data.best_time_tomorrow.best_time;
-                    document.getElementById('best-conditions').textContent = data.best_time_tomorrow.conditions;
+                    const best = data.best_time_tomorrow;
+                    document.getElementById('best-hour').textContent = best.best_time;
+                    document.getElementById('best-conditions').textContent = best.conditions;
                     
-                    document.getElementById('wave-height').textContent = 
-                        data.best_time_tomorrow.wave_height ? data.best_time_tomorrow.wave_height.toFixed(1) : '--';
-                    document.getElementById('wind-speed').textContent = 
-                        data.best_time_tomorrow.wind_speed ? data.best_time_tomorrow.wind_speed.toFixed(0) : '--';
-                    document.getElementById('surf-score').textContent = 
-                        data.best_time_tomorrow.score || '--';
+                    // Get detailed data for best time
+                    const bestEntry = data.morning_surf.find(e => e.hour === parseInt(best.best_time.split(':')[0]));
+                    if (bestEntry) {
+                        document.getElementById('wind-speed').textContent = `${bestEntry.wind_speed?.toFixed(0) || '--'} km/h`;
+                        document.getElementById('wave-height').textContent = `${bestEntry.wave_height?.toFixed(1) || '--'}m`;
+                        document.getElementById('foil-score').textContent = best.score?.toFixed(0) || '--';
+                        
+                        // Wind direction
+                        const wd = bestEntry.wind_direction;
+                        let wdText = '--';
+                        if (wd !== null && wd !== undefined) {
+                            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                            wdText = dirs[Math.round(wd / 45) % 8];
+                        }
+                        document.getElementById('wind-dir').textContent = wdText;
+                        
+                        // Generate why text
+                        generateWhyText(bestEntry);
+                    }
                 }
                 
                 // Update table
@@ -295,145 +333,92 @@
                 tbody.innerHTML = '';
                 
                 if (data.morning_surf && data.morning_surf.length > 0) {
-                    const wavePeriods = await fetch(`/api/surf/conditions?lat=${lat}&lon=${lon}`);
-                    const periodData = await wavePeriods.json();
-                    const periods = periodData.hourly?.wave_period || [];
-                    
                     data.morning_surf.forEach(entry => {
-                        const period = periods[entry.hour - 6] || '--';
-                        const score = entry.score || 0;
-                        let conditionClass = 'condition-poor';
-                        let conditionText = '❌ Poor';
-                        
-                        if (score > 40) {
-                            conditionClass = 'condition-great';
-                            conditionText = '🔥 Great';
-                        } else if (score > 20) {
-                            conditionClass = 'condition-good';
-                            conditionText = '✅ Good';
-                        } else if (score > 0) {
-                            conditionClass = 'condition-fair';
-                            conditionText = '⚠️ Fair';
+                        // Wind rating
+                        let windClass = 'wind-bad';
+                        let windText = '❌';
+                        if (entry.wind_speed >= 15 && entry.wind_speed <= 40) {
+                            windClass = 'wind-good';
+                            windText = '✅ Perfect';
+                        } else if (entry.wind_speed >= 10 && entry.wind_speed < 50) {
+                            windClass = 'wind-fair';
+                            windText = '⚠️ OK';
                         }
+                        
+                        // Wave rating (lower is better for wing foil)
+                        let waveClass = 'wave-low';
+                        let waveText = '✅ Calm';
+                        if (entry.wave_height > 1.0) {
+                            waveClass = 'wave-high';
+                            waveText = '❌ Choppy';
+                        } else if (entry.wave_height > 0.5) {
+                            waveClass = 'wave-med';
+                            waveText = '⚠️ Moderate';
+                        }
+                        
+                        const score = entry.score || 0;
+                        let scoreClass = '❌';
+                        if (score > 40) scoreClass = '🔥';
+                        else if (score > 20) scoreClass = '✅';
+                        else if (score > 0) scoreClass = '⚠️';
                         
                         tbody.innerHTML += `
                             <tr>
                                 <td>${entry.hour}:00</td>
-                                <td>${entry.wave_height?.toFixed(1) || '--'}m</td>
-                                <td>${entry.wind_speed?.toFixed(0) || '--'} km/h</td>
-                                <td>${period}s</td>
-                                <td>${score}</td>
-                                <td><span class="condition-badge ${conditionClass}">${conditionText}</span></td>
+                                <td><span class="wind-indicator ${windClass}">${windText}</span></td>
+                                <td><span class="wave-indicator ${waveClass}">${waveText}</span></td>
+                                <td>${score.toFixed(0)} ${scoreClass}</td>
                             </tr>
                         `;
                     });
-                    
-                    // Update chart
-                    updateChart(data.morning_surf);
-                    
-                    // Get wave period for best time
-                    if (data.morning_surf[0]) {
-                        const bestHour = data.morning_surf[0].hour;
-                        const period = periods[bestHour - 6] || '--';
-                        document.getElementById('wave-period').textContent = period;
-                    }
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No surf data available for this time</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No data available</td></tr>';
                 }
                 
             } catch (error) {
-                console.error('Error fetching forecast:', error);
-                alert('Failed to load forecast');
+                console.error('Error:', error);
+                document.getElementById('why-text').textContent = 'Failed to load forecast data.';
             }
         }
         
-        function updateChart(data) {
-            const ctx = document.getElementById('waveChart').getContext('2d');
+        function generateWhyText(entry) {
+            const parts = [];
             
-            if (waveChart) {
-                waveChart.destroy();
+            // Wind analysis
+            if (entry.wind_speed >= 15 && entry.wind_speed <= 40) {
+                parts.push(`💨 ${entry.wind_speed.toFixed(0)} km/h wind is perfect for wing foiling — enough power to stay up, not too much to handle.`);
+            } else if (entry.wind_speed < 15) {
+                parts.push(`💨 Wind is light (${entry.wind_speed.toFixed(0)} km/h) — may struggle for lift.`);
+            } else if (entry.wind_speed > 40) {
+                parts.push(`💨 Strong winds (${entry.wind_speed.toFixed(0)} km/h) — advanced conditions,慎重な判断が必要 (be careful).`);
             }
             
-            const labels = data.map(d => `${d.hour}:00`);
-            const waveHeights = data.map(d => d.wave_height || 0);
-            const windSpeeds = data.map(d => d.wind_speed || 0);
-            const scores = data.map(d => d.score || 0);
+            // Wave analysis
+            if (entry.wave_height <= 0.5) {
+                parts.push(`🌊 Calm waters (${entry.wave_height.toFixed(1)}m) — ideal for learning and maintaining speed on the foil.`);
+            } else if (entry.wave_height > 1.0) {
+                parts.push(`🌊 Choppy conditions (${entry.wave_height.toFixed(1)}m) — waves can destabilize the foil.`);
+            }
             
-            waveChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Wave Height (m)',
-                            data: waveHeights,
-                            backgroundColor: 'rgba(100, 255, 218, 0.6)',
-                            borderColor: 'rgba(100, 255, 218, 1)',
-                            borderWidth: 1,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'Wind (km/h)',
-                            data: windSpeeds,
-                            backgroundColor: 'rgba(255, 107, 107, 0.6)',
-                            borderColor: 'rgba(255, 107, 107, 1)',
-                            borderWidth: 1,
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: 'Surf Score',
-                            data: scores,
-                            type: 'line',
-                            borderColor: 'rgba(255, 217, 61, 1)',
-                            backgroundColor: 'rgba(255, 217, 61, 0.2)',
-                            fill: true,
-                            tension: 0.4,
-                            yAxisID: 'y2'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            position: 'left',
-                            title: { display: true, text: 'Wave Height (m)', color: '#64ffda' },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#8892b0' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            position: 'right',
-                            title: { display: true, text: 'Wind (km/h)', color: '#ff6b6b' },
-                            grid: { drawOnChartArea: false },
-                            ticks: { color: '#8892b0' }
-                        },
-                        y2: {
-                            type: 'linear',
-                            position: 'right',
-                            title: { display: true, text: 'Score', color: '#ffd93d' },
-                            grid: { drawOnChartArea: false },
-                            ticks: { color: '#8892b0' },
-                            display: false
-                        },
-                        x: {
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            ticks: { color: '#8892b0' }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: { color: '#e6f1ff' }
-                        }
-                    }
-                }
-            });
+            // Wind direction
+            if (entry.wind_direction !== null) {
+                const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const dir = dirs[Math.round(entry.wind_direction / 45) % 8];
+                parts.push(`🧭 Wind from ${dir} — ${getWindAdvice(entry.wind_direction)}`);
+            }
+            
+            document.getElementById('why-text').innerHTML = parts.join('<br><br>');
         }
         
-        // Load forecast on page load
+        function getWindAdvice(degrees) {
+            // Simplified offshore/offshore advice
+            if (degrees >= 315 || degrees < 45) return 'cross-shore — stable conditions';
+            if (degrees >= 45 && degrees < 135) return 'onshore — may be choppy';
+            if (degrees >= 135 && degrees < 225) return 'offshore — powerful but can be gusty';
+            return 'cross-shore — good conditions';
+        }
+        
         document.addEventListener('DOMContentLoaded', updateForecast);
     </script>
 </body>
 </html>
-<!-- trigger redeploy -->
