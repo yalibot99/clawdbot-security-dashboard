@@ -602,6 +602,10 @@ def api_security_summary():
 
 def get_multi_day_forecast(lat, lon, days=3):
     """Get 3-day forecast for all days."""
+    headers = {
+        'User-Agent': 'Ayali-WingFoil-Forecast/1.0'
+    }
+    
     # Get weather data (wind) for multiple days
     weather_url = "https://api.open-meteo.com/v1/forecast"
     weather_params = {
@@ -613,7 +617,7 @@ def get_multi_day_forecast(lat, lon, days=3):
     }
     
     try:
-        weather_resp = requests.get(weather_url, params=weather_params, timeout=10)
+        weather_resp = requests.get(weather_url, params=weather_params, headers=headers, timeout=15)
         weather_resp.raise_for_status()
         weather_data = weather_resp.json()
         
@@ -677,6 +681,10 @@ def get_multi_day_forecast(lat, lon, days=3):
 
 def get_surf_forecast(lat, lon, days=1):
     """Fetch surf forecast from Open-Meteo APIs (Marine + Weather for wind)."""
+    headers = {
+        'User-Agent': 'Ayali-WingFoil-Forecast/1.0'
+    }
+    
     # Get marine data (waves)
     marine_url = "https://marine-api.open-meteo.com/v1/marine"
     marine_params = {
@@ -699,12 +707,12 @@ def get_surf_forecast(lat, lon, days=1):
     
     try:
         # Fetch marine data
-        marine_resp = requests.get(marine_url, params=marine_params, timeout=15)
+        marine_resp = requests.get(marine_url, params=marine_params, headers=headers, timeout=15)
         marine_resp.raise_for_status()
         marine_data = marine_resp.json()
         
         # Fetch weather data
-        weather_resp = requests.get(weather_url, params=weather_params, timeout=15)
+        weather_resp = requests.get(weather_url, params=weather_params, headers=headers, timeout=15)
         weather_resp.raise_for_status()
         weather_data = weather_resp.json()
         
