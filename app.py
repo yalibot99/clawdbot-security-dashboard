@@ -888,6 +888,7 @@ def api_surf_forecast():
     if not forecast:
         # Try single API as fallback
         try:
+            headers = {'User-Agent': 'Ayali-WingFoil-Forecast/1.0'}
             weather_url = "https://api.open-meteo.com/v1/forecast"
             weather_params = {
                 'latitude': lat,
@@ -896,7 +897,7 @@ def api_surf_forecast():
                 'timezone': 'auto',
                 'forecast_days': 1
             }
-            weather_resp = requests.get(weather_url, params=weather_params, timeout=15)
+            weather_resp = requests.get(weather_url, params=weather_params, headers=headers, timeout=30)
             weather_resp.raise_for_status()
             weather_data = weather_resp.json()
             
@@ -913,7 +914,7 @@ def api_surf_forecast():
             }
         except Exception as fallback_error:
             logger.error(f"Fallback also failed: {fallback_error}")
-            return jsonify({'error': 'Failed to fetch forecast. Please try again.'}), 500
+            return jsonify({'error': f'Failed to fetch forecast. Debug: {str(fallback_error)[:100]}'}), 500
     
     # Extract metadata
     source = forecast.get('_source', 'Open-Meteo Marine API')
