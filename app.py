@@ -698,12 +698,13 @@ def get_surf_forecast(lat, lon, days=1):
     }
     
     try:
-        # Fetch both
-        marine_resp = requests.get(marine_url, params=marine_params, timeout=10)
+        # Fetch marine data
+        marine_resp = requests.get(marine_url, params=marine_params, timeout=15)
         marine_resp.raise_for_status()
         marine_data = marine_resp.json()
         
-        weather_resp = requests.get(weather_url, params=weather_params, timeout=10)
+        # Fetch weather data
+        weather_resp = requests.get(weather_url, params=weather_params, timeout=15)
         weather_resp.raise_for_status()
         weather_data = weather_resp.json()
         
@@ -717,6 +718,12 @@ def get_surf_forecast(lat, lon, days=1):
         marine_data['_updated'] = datetime.now().isoformat()
         
         return marine_data
+    except requests.exceptions.Timeout:
+        logger.error("Surf API timeout")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Surf API connection error: {e}")
+        return None
     except Exception as e:
         logger.error(f"Surf API error: {e}")
         return None
@@ -871,7 +878,34 @@ def api_surf_forecast():
     forecast = get_surf_forecast(lat, lon)
     
     if not forecast:
-        return jsonify({'error': 'Failed to fetch forecast'}), 500
+        # Try single API as fallback
+        try:
+            weather_url = "https://api.open-meteo.com/v1/forecast"
+            weather_params = {
+                'latitude': lat,
+                'longitude': lon,
+                'hourly': 'wind_speed_10m,wind_direction_10m,wave_height',
+                'timezone': 'auto',
+                'forecast_days': 1
+            }
+            weather_resp = requests.get(weather_url, params=weather_params, timeout=15)
+            weather_resp.raise_for_status()
+            weather_data = weather_resp.json()
+            
+            # Use weather data directly
+            forecast = {
+                'hourly': {
+                    'time': weather_data.get('hourly', {}).get('time', []),
+                    'wave_height': weather_data.get('hourly', {}).get('wave_height', []),
+                    'wind_speed_10m': weather_data.get('hourly', {}).get('wind_speed_10m', []),
+                    'wind_direction_10m': weather_data.get('hourly', {}).get('wind_direction_10m', []),
+                },
+                '_source': 'Open-Meteo Weather API (fallback)',
+                '_updated': datetime.now().isoformat()
+            }
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {fallback_error}")
+            return jsonify({'error': 'Failed to fetch forecast. Please try again.'}), 500
     
     # Extract metadata
     source = forecast.get('_source', 'Open-Meteo Marine API')
