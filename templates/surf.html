@@ -111,6 +111,26 @@
             cursor: pointer;
         }
         
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 23, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-overlay.hidden {
+            display: none;
+        }
+        
         /* Best Card */
         .best-card {
             background: var(--bg-card);
@@ -418,6 +438,11 @@
             <div style="width: 50px;"></div>
         </div>
         
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay">
+            Loading forecast...
+        </div>
+        
         <!-- Spot -->
         <div class="spot">
             <div class="spot-name">📍 <span id="spot-name">Tel Aviv Beach</span></div>
@@ -528,18 +553,32 @@
         }
         
         async function updateForecast() {
-            const lat = parseFloat(document.getElementById('lat').value);
-            const lon = parseFloat(document.getElementById('lon').value);
+            const latInput = document.getElementById('lat').value.trim();
+            const lonInput = document.getElementById('lon').value.trim();
+            
+            // Show loading
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            
+            // Wait a tiny bit for loading to show
+            await new Promise(r => setTimeout(r, 100));
+            
+            if (!latInput || !lonInput) {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Enter coordinates and tap Go</span>';
+                return;
+            }
+            
+            const lat = parseFloat(latInput);
+            const lon = parseFloat(lonInput);
             
             if (isNaN(lat) || isNaN(lon)) {
+                document.getElementById('loading-overlay').classList.add('hidden');
                 alert('Invalid coordinates');
                 return;
             }
             
             document.getElementById('spot-name').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
             document.getElementById('windy-link').href = `https://www.windy.com/?${lat},${lon},8`;
-            
-            document.body.classList.add('loading');
             
             try {
                 // Main forecast
@@ -639,12 +678,24 @@
                 
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Error loading data. Tap Go to retry.</span>';
             } finally {
-                document.body.classList.remove('loading');
+                document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
         
-        document.addEventListener('DOMContentLoaded', updateForecast);
+        // Initialize with defaults on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure inputs have defaults
+            const latInput = document.getElementById('lat');
+            const lonInput = document.getElementById('lon');
+            
+            if (!latInput.value) latInput.value = '32.0853';
+            if (!lonInput.value) lonInput.value = '34.7818';
+            
+            // Auto-load with defaults
+            updateForecast();
+        });
     </script>
 </body>
 </html>
