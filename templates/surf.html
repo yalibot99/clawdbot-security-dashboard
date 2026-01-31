@@ -726,6 +726,8 @@
                         
                         const dayEl = document.createElement('div');
                         dayEl.className = `day-card ${isBest ? 'best' : ''}`;
+                        dayEl.style.cursor = 'pointer';
+                        dayEl.onclick = () => selectDay(day.date, day.good_hours, day.min_speed, day.max_speed);
                         dayEl.innerHTML = `
                             <div class="day-icon">${isBest ? '🏆' : '📅'}</div>
                             <div class="day-info">
@@ -795,6 +797,100 @@
                 searchLocation();
             }
         });
+        
+        async function selectDay(dateStr, goodHours, minSpeed, maxSpeed) {
+            if (!currentLat || !currentLon) return;
+            
+            // Parse date string (YYYY-MM-DD)
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const targetDate = new Date(year, month - 1, day);
+            
+            // Update UI to show we're loading
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-overlay').textContent = `Loading ${targetDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}...`;
+            
+            try {
+                // Fetch hourly forecast for the selected day
+                const resp = await fetch(`/api/surf/forecast?lat=${currentLat}&lon=${currentLon}`);
+                const data = await resp.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                // Filter hours for the selected day
+                const allHours = data.all_hours || [];
+                const dayHours = allHours.filter(h => {
+                    const hourDate = new Date(h.time);
+                    return hourDate.getDate() === day && hourDate.getMonth() === (month - 1);
+                });
+                
+                // Find best time for this day
+                const goodDayHours = dayHours.filter(h => h.wind_speed >= 10 && h.wind_speed <= 40 && h.hour >= 6 && h.hour <= 19);
+                
+                if (goodDayHours.length > 0) {
+                    // Find optimal time (wind between 20-35 for best foiling)
+                    const optimalHour = goodDayHours.find(h => h.wind_speed >= 20 && h.wind_speed <= 35);
+                    const best = optimalHour || goodDayHours[0];
+                    
+                    document.getElementById('best-time').textContent = `${best.hour}:00`;
+                    
+                    const score = (best.wind_speed >= 15 && best.wind_speed <= 40) ? 35 : 20;
+                    const rating = getRatingClass(score);
+                    const ratingEl = document.getElementById('best-rating');
+                    ratingEl.textContent = getRatingText(rating);
+                    ratingEl.className = `best-rating rating-${rating}`;
+                    
+                    // Stats
+                    document.getElementById('stat-wind').textContent = best.wind_speed.toFixed(1);
+                    document.getElementById('stat-dir').textContent = best.wind_dir_name;
+                    
+                    // Update gauge
+                    updateGauge(best.wind_speed);
+                } else {
+                    document.getElementById('best-time').textContent = '--:--';
+                    document.getElementById('best-rating').textContent = '❌ Poor';
+                    document.getElementById('best-rating').className = 'best-rating rating-poor';
+                    document.getElementById('stat-wind').textContent = '--';
+                    document.getElementById('stat-dir').textContent = '--';
+                    updateGauge(0);
+                }
+                
+                // Update good hours count
+                document.getElementById('stat-hours').textContent = goodDayHours.length;
+                
+                // Update hourly scroll for selected day
+                const scrollEl = document.getElementById('hourly-scroll');
+                scrollEl.innerHTML = '';
+                
+                const dayDisplayHours = dayHours.filter(h => h.hour >= 6 && h.hour <= 19);
+                
+                if (dayDisplayHours.length === 0) {
+                    scrollEl.innerHTML = '<div class="hour-chip poor">No data</div>';
+                } else {
+                    dayDisplayHours.forEach(h => {
+                        const score = (h.wind_speed >= 10 && h.wind_speed <= 40) ? 25 : (h.wind_speed < 10 ? -10 : 10);
+                        const chip = document.createElement('div');
+                        chip.className = `hour-chip ${getRatingClass(score)}`;
+                        chip.innerHTML = `
+                            <div class="hour-time">${h.hour}:00</div>
+                            <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
+                            <div class="hour-dir">${h.wind_dir_name || '--'}</div>
+                        `;
+                        scrollEl.appendChild(chip);
+                    });
+                }
+                
+                // Update spot name to show selected date
+                document.getElementById('spot-name').textContent = `${targetDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+                
+            } catch (error) {
+                console.error('Error selecting day:', error);
+            } finally {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            }
+        }
     </script>
 </body>
 </html>
