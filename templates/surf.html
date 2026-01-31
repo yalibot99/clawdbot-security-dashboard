@@ -543,6 +543,64 @@
             return labels[rating] || '❌ Poor';
         }
         
+        // Calculate wind score (0-100) for wing foiling and return color
+        function getWindScoreColor(windSpeed) {
+            // Wing foil ideal: 10-40 km/h, optimal: 20-35 km/h
+            // Score: 0 = terrible, 100 = perfect
+            let score = 0;
+            
+            if (windSpeed < 5) {
+                score = 0; // Too light
+            } else if (windSpeed < 10) {
+                score = 10 + (windSpeed - 5) * 10; // Light but building
+            } else if (windSpeed < 15) {
+                score = 50 + (windSpeed - 10) * 10; // Getting good
+            } else if (windSpeed < 20) {
+                score = 75 + (windSpeed - 15) * 5; // Good
+            } else if (windSpeed <= 35) {
+                score = 100; // Perfect sweet spot
+            } else if (windSpeed <= 40) {
+                score = 75 + (40 - windSpeed) * 5; // Strong but still good
+            } else if (windSpeed <= 50) {
+                score = 50 + (50 - windSpeed) * 5; // Getting too strong
+            } else {
+                score = Math.max(0, 25 - (windSpeed - 50) * 5); // Dangerous
+            }
+            
+            score = Math.max(0, Math.min(100, score));
+            
+            // Color gradient: Red (0) -> Orange (30) -> Yellow (50) -> Light Green (70) -> Green (100)
+            let r, g, b;
+            
+            if (score < 30) {
+                // Red to Orange
+                const t = score / 30;
+                r = 255;
+                g = Math.round(100 + t * 100);
+                b = 50;
+            } else if (score < 50) {
+                // Orange to Yellow
+                const t = (score - 30) / 20;
+                r = 255;
+                g = Math.round(200 + t * 55);
+                b = 50;
+            } else if (score < 70) {
+                // Yellow to Light Green
+                const t = (score - 50) / 20;
+                r = Math.round(255 - t * 100);
+                g = 255;
+                b = 50;
+            } else {
+                // Light Green to Green
+                const t = (score - 70) / 30;
+                r = Math.round(155 - t * 55);
+                g = 255;
+                b = Math.round(50 + t * 50);
+            }
+            
+            return { score, color: `rgba(${r}, ${g}, ${b}, 0.25)`, border: `rgba(${r}, ${g}, ${b}, 0.8)` };
+        }
+        
         function updateGauge(windSpeed) {
             const fill = document.getElementById('gauge-fill');
             const value = document.getElementById('gauge-value');
@@ -696,9 +754,11 @@
                     scrollEl.innerHTML = '<div class="hour-chip poor">No data</div>';
                 } else {
                     displayHours.forEach(h => {
-                        const score = scoreByHour[h.hour] || 0;
+                        const { color, border } = getWindScoreColor(h.wind_speed);
                         const chip = document.createElement('div');
-                        chip.className = `hour-chip ${getRatingClass(score)}`;
+                        chip.className = 'hour-chip';
+                        chip.style.background = color;
+                        chip.style.borderColor = h.wind_speed >= 20 && h.wind_speed <= 35 ? border : 'transparent';
                         chip.innerHTML = `
                             <div class="hour-time">${h.hour}:00</div>
                             <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
@@ -870,9 +930,11 @@
                     scrollEl.innerHTML = '<div class="hour-chip poor">No data</div>';
                 } else {
                     dayDisplayHours.forEach(h => {
-                        const score = (h.wind_speed >= 10 && h.wind_speed <= 40) ? 25 : (h.wind_speed < 10 ? -10 : 10);
+                        const { color, border } = getWindScoreColor(h.wind_speed);
                         const chip = document.createElement('div');
-                        chip.className = `hour-chip ${getRatingClass(score)}`;
+                        chip.className = 'hour-chip';
+                        chip.style.background = color;
+                        chip.style.borderColor = h.wind_speed >= 20 && h.wind_speed <= 35 ? border : 'transparent';
                         chip.innerHTML = `
                             <div class="hour-time">${h.hour}:00</div>
                             <div class="hour-wind">${h.wind_speed.toFixed(0)}</div>
