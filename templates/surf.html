@@ -704,10 +704,25 @@
             try {
                 // Main forecast
                 const resp = await fetch(`/api/surf/forecast?lat=${lat}&lon=${lon}`);
+                
+                // Check if response is valid JSON
+                const contentType = resp.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('API returned non-JSON response');
+                }
+                
                 const data = await resp.json();
                 
                 if (data.error) {
-                    alert(data.error);
+                    document.getElementById('best-time').textContent = '--:--';
+                    document.getElementById('best-rating').textContent = 'Error';
+                    document.getElementById('best-rating').className = 'best-rating rating-poor';
+                    document.getElementById('stat-wind').textContent = '--';
+                    document.getElementById('stat-dir').textContent = '--';
+                    document.getElementById('stat-hours').textContent = '--';
+                    updateGauge(0);
+                    document.getElementById('hourly-scroll').innerHTML = '<div class="hour-chip poor">No data</div>';
+                    document.getElementById('loading-overlay').classList.add('hidden');
                     return;
                 }
                 
@@ -770,6 +785,14 @@
                 
                 // Multi-day
                 const multiResp = await fetch(`/api/surf/multi-day?lat=${lat}&lon=${lon}`);
+                
+                const multiContentType = multiResp.headers.get('content-type');
+                if (!multiContentType || !multiContentType.includes('application/json')) {
+                    document.getElementById('days-container').innerHTML = '<div class="hour-chip poor">No forecast data</div>';
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    return;
+                }
+                
                 const multiData = await multiResp.json();
                 
                 const daysContainer = document.getElementById('days-container');
@@ -817,9 +840,18 @@
                 
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('best-time').textContent = '--:--';
+                document.getElementById('best-rating').textContent = 'Error';
+                document.getElementById('best-rating').className = 'best-rating rating-poor';
+                document.getElementById('stat-wind').textContent = '--';
+                document.getElementById('stat-dir').textContent = '--';
+                document.getElementById('stat-hours').textContent = '--';
+                updateGauge(0);
+                document.getElementById('hourly-scroll').innerHTML = '<div class="hour-chip poor">Load error</div>';
                 document.getElementById('forecast-summary-section').style.display = 'none';
             } finally {
                 document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('loading-overlay').textContent = 'Loading forecast...';
             }
         }
         
@@ -872,10 +904,18 @@
             try {
                 // Fetch hourly forecast for the selected day
                 const resp = await fetch(`/api/surf/forecast?lat=${currentLat}&lon=${currentLon}`);
+                
+                const contentType = resp.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('API returned non-JSON response');
+                }
+                
                 const data = await resp.json();
                 
                 if (data.error) {
-                    alert(data.error);
+                    document.getElementById('best-time').textContent = '--:--';
+                    document.getElementById('best-rating').textContent = 'Error';
+                    document.getElementById('loading-overlay').classList.add('hidden');
                     return;
                 }
                 
