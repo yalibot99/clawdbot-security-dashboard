@@ -1280,6 +1280,7 @@ def api_surf_multi_day():
 
 
 if __name__ == '__main__':
+    # Trigger rebuild
     print("🚀 Dashboard starting at http://localhost:5000")
     print("🎯 Clawdbot Security Intelligence Dashboard")
     print("🛡️  Security Intelligence: Active (web, X, blogs)")
