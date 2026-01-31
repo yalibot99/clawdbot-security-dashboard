@@ -447,17 +447,23 @@
         <div class="spot">
             <div class="spot-name">📍 <span id="spot-name">Tel Aviv Beach</span></div>
             <div class="spot-inputs">
-                <input type="number" id="lat" step="0.0001" placeholder="Lat" value="32.0853">
-                <input type="number" id="lon" step="0.0001" placeholder="Lon" value="34.7818">
-                <button class="spot-btn" onclick="updateForecast()">Go</button>
+                <input type="text" id="location-input" placeholder="City or spot name" value="">
+                <button class="spot-btn" onclick="searchLocation()">🔍</button>
             </div>
+            <div id="location-error" style="color: var(--poor); font-size: 12px; margin-top: 8px; display: none;"></div>
         </div>
         
         <!-- Best Time -->
         <div class="best-card">
             <div class="best-label">Best Time</div>
             <div class="best-time" id="best-time">--:--</div>
-            <div class="best-rating" id="best-rating">Loading</div>
+            <div class="best-rating" id="best-rating">Search location</div>
+        </div>
+        
+        <!-- Forecast Summary -->
+        <div class="section" id="forecast-summary-section" style="display: none;">
+            <div class="section-title">Today's Outlook</div>
+            <div id="forecast-summary-text" style="font-size: 14px; line-height: 1.6; color: var(--text-primary);"></div>
         </div>
         
         <!-- Quick Stats -->
@@ -522,6 +528,9 @@
     </div>
     
     <script>
+        let currentLat = null;
+        let currentLon = null;
+        
         function getRatingClass(score) {
             if (score > 40) return 'excellent';
             if (score > 20) return 'good';
@@ -552,33 +561,87 @@
             }
         }
         
+        async function searchLocation() {
+            const location = document.getElementById('location-input').value.trim();
+            const errorEl = document.getElementById('location-error');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            
+            if (!location) {
+                errorEl.textContent = 'Enter a city or spot name';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            errorEl.style.display = 'none';
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.textContent = 'Searching...';
+            
+            try {
+                const resp = await fetch(`/api/surf/geocode?q=${encodeURIComponent(location)}`);
+                const data = await resp.json();
+                
+                if (data.success) {
+                    currentLat = data.lat;
+                    currentLon = data.lon;
+                    document.getElementById('spot-name').textContent = data.display_name || location;
+                    document.getElementById('windy-link').href = `https://www.windy.com/?${currentLat},${currentLon},8`;
+                    
+                    // Add hidden inputs for lat/lon
+                    let latInput = document.getElementById('lat');
+                    let lonInput = document.getElementById('lon');
+                    if (!latInput) {
+                        latInput = document.createElement('input');
+                        latInput.type = 'hidden';
+                        latInput.id = 'lat';
+                        document.body.appendChild(latInput);
+                    }
+                    if (!lonInput) {
+                        lonInput = document.createElement('input');
+                        lonInput.type = 'hidden';
+                        lonInput.id = 'lon';
+                        document.body.appendChild(lonInput);
+                    }
+                    latInput.value = currentLat;
+                    lonInput.value = currentLon;
+                    
+                    loadingOverlay.textContent = 'Loading forecast...';
+                    await updateForecast();
+                } else {
+                    errorEl.textContent = data.error || 'Location not found';
+                    errorEl.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                errorEl.textContent = 'Error searching location';
+                errorEl.style.display = 'block';
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+        
         async function updateForecast() {
-            const latInput = document.getElementById('lat').value.trim();
-            const lonInput = document.getElementById('lon').value.trim();
+            // Get lat/lon from hidden inputs or prompt
+            let latInput = document.getElementById('lat');
+            let lonInput = document.getElementById('lon');
+            
+            if ((!latInput || !lonInput || !latInput.value || !lonInput.value) && !currentLat) {
+                document.getElementById('forecast-summary-section').style.display = 'none';
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('best-time').textContent = '--:--';
+                document.getElementById('best-rating').textContent = 'Search location';
+                document.getElementById('best-rating').className = 'best-rating rating-poor';
+                return;
+            }
+            
+            const lat = parseFloat(latInput ? latInput.value : currentLat);
+            const lon = parseFloat(lonInput ? lonInput.value : currentLon);
             
             // Show loading
             document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-overlay').textContent = 'Loading forecast...';
             
             // Wait a tiny bit for loading to show
             await new Promise(r => setTimeout(r, 100));
-            
-            if (!latInput || !lonInput) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Enter coordinates and tap Go</span>';
-                return;
-            }
-            
-            const lat = parseFloat(latInput);
-            const lon = parseFloat(lonInput);
-            
-            if (isNaN(lat) || isNaN(lon)) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                alert('Invalid coordinates');
-                return;
-            }
-            
-            document.getElementById('spot-name').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-            document.getElementById('windy-link').href = `https://www.windy.com/?${lat},${lon},8`;
             
             try {
                 // Main forecast
@@ -608,6 +671,10 @@
                     if (best.wind_speed) {
                         updateGauge(best.wind_speed);
                     }
+                } else {
+                    document.getElementById('best-time').textContent = '--:--';
+                    document.getElementById('best-rating').textContent = '❌ Poor';
+                    document.getElementById('best-rating').className = 'best-rating rating-poor';
                 }
                 
                 // Count good hours
@@ -671,6 +738,16 @@
                     });
                 }
                 
+                // Show forecast summary
+                const summarySection = document.getElementById('forecast-summary-section');
+                const summaryText = document.getElementById('forecast-summary-text');
+                if (data.forecast_summary) {
+                    summarySection.style.display = 'block';
+                    summaryText.textContent = data.forecast_summary;
+                } else {
+                    summarySection.style.display = 'none';
+                }
+                
                 // Source
                 document.getElementById('data-source').textContent = (data.source || '').replace(' (free)', '');
                 document.getElementById('data-updated').textContent = data.updated ? 
@@ -678,23 +755,45 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('wind-summary').innerHTML = '<span style="color: var(--poor);">Error loading data. Tap Go to retry.</span>';
+                document.getElementById('forecast-summary-section').style.display = 'none';
             } finally {
                 document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
         
-        // Initialize with defaults on page load
+        // Initialize - try to get user's location or use default
         document.addEventListener('DOMContentLoaded', () => {
-            // Ensure inputs have defaults
-            const latInput = document.getElementById('lat');
-            const lonInput = document.getElementById('lon');
+            // Check for URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const latParam = urlParams.get('lat');
+            const lonParam = urlParams.get('lon');
+            const spotParam = urlParams.get('spot');
             
-            if (!latInput.value) latInput.value = '32.0853';
-            if (!lonInput.value) lonInput.value = '34.7818';
-            
-            // Auto-load with defaults
-            updateForecast();
+            if (latParam && lonParam) {
+                currentLat = parseFloat(latParam);
+                currentLon = parseFloat(lonParam);
+                
+                // Add hidden inputs
+                const latInput = document.createElement('input');
+                latInput.type = 'hidden';
+                latInput.id = 'lat';
+                latInput.value = currentLat;
+                document.body.appendChild(latInput);
+                
+                const lonInput = document.createElement('input');
+                lonInput.type = 'hidden';
+                lonInput.id = 'lon';
+                lonInput.value = currentLon;
+                document.body.appendChild(lonInput);
+                
+                document.getElementById('spot-name').textContent = spotParam || `${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`;
+                document.getElementById('windy-link').href = `https://www.windy.com/?${currentLat},${currentLon},8`;
+                updateForecast();
+            } else {
+                // Default to Tel Aviv
+                document.getElementById('location-input').value = 'Tel Aviv Beach';
+                searchLocation();
+            }
         });
     </script>
 </body>

@@ -795,6 +795,105 @@ def wind_direction_name(degrees):
     return dirs[index]
 
 
+def geocode_location(location):
+    """
+    Geocode a city/location name to coordinates using Nominatim (free).
+    Returns (lat, lon, display_name) or None if not found.
+    """
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'q': location,
+            'format': 'json',
+            'limit': 1,
+            'addressdetails': 1
+        }
+        headers = {
+            'User-Agent': 'Ayali-WingFoil-Forecast/1.0'
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data and len(data) > 0:
+            result = data[0]
+            lat = float(result['lat'])
+            lon = float(result['lon'])
+            display_name = result.get('display_name', '').split(',')[0]  # Just the city name
+            return lat, lon, display_name
+        
+        return None
+    except Exception as e:
+        logger.error(f"Geocoding error: {e}")
+        return None
+
+
+def generate_forecast_summary(hourly_data, best_time):
+    """Generate a natural language summary of today's conditions."""
+    times = hourly_data.get('time', [])
+    wind_speeds = hourly_data.get('wind_speed_10m', [])
+    wind_dirs = hourly_data.get('wind_direction_10m', [])
+    
+    if not wind_speeds:
+        return "No wind data available for today."
+    
+    # Analyze conditions
+    periods = []
+    for i, speed in enumerate(wind_speeds):
+        if i >= len(times):
+            break
+        if speed is None:
+            continue
+        hour = datetime.fromisoformat(times[i]).hour
+        direction = wind_dirs[i] if i < len(wind_dirs) else None
+        periods.append({'hour': hour, 'speed': speed, 'direction': direction})
+    
+    if not periods:
+        return "Unable to analyze today's conditions."
+    
+    # Count good hours (10-40 km/h, daytime)
+    good_hours = [p for p in periods if 10 <= p['speed'] <= 40 and 6 <= p['hour'] <= 19]
+    light_hours = [p for p in periods if p['speed'] < 10]
+    strong_hours = [p for p in periods if p['speed'] > 40]
+    
+    # Build summary
+    parts = []
+    
+    if good_hours:
+        min_hour = min(p['hour'] for p in good_hours)
+        max_hour = max(p['hour'] for p in good_hours)
+        
+        # Check if conditions are optimal
+        avg_speed = sum(p['speed'] for p in good_hours) / len(good_hours)
+        
+        if 15 <= avg_speed <= 35:
+            parts.append(f"Great day ahead! Wind will be perfect for wing foiling ({avg_speed:.0f} km/h avg) from {min_hour}:00 to {max_hour}:00.")
+        else:
+            parts.append(f"Good wing foil conditions from {min_hour}:00 to {max_hour}:00 with wind averaging {avg_speed:.0f} km/h.")
+        
+        # Direction info
+        if good_hours:
+            avg_dir = sum(p['direction'] or 0 for p in good_hours) / len(good_hours)
+            parts.append(f"Wind direction: {wind_direction_name(avg_dir)}.")
+    else:
+        # No good hours
+        if light_hours:
+            parts.append("Wind too light for foiling today (under 10 km/h).")
+        if strong_hours:
+            parts.append("Wind too strong (over 40 km/h) - advanced conditions only.")
+        if not light_hours and not strong_hours:
+            parts.append("No suitable wing foil conditions today.")
+    
+    # Add timing advice
+    if good_hours:
+        best_hour = max(good_hours, key=lambda p: p['speed'] if p['speed'] <= 40 else 0)
+        if best_hour['speed'] >= 20:
+            parts.append(f"Best time: aim for {best_hour['hour']}:00 for optimal speed ({best_hour['speed']:.0f} km/h).")
+    
+    return ' '.join(parts)
+
+
 def generate_wind_summary(hourly_data):
     """Generate a paragraph describing wind conditions throughout the day."""
     times = hourly_data.get('time', [])
@@ -918,6 +1017,32 @@ def surf_dashboard():
     return render_template('surf.html')
 
 
+@app.route('/api/surf/geocode')
+def api_surf_geocode():
+    """Geocode a city/location name to coordinates."""
+    location = request.args.get('q', '').strip()
+    
+    if not location:
+        return jsonify({'error': 'Missing location parameter'}), 400
+    
+    result = geocode_location(location)
+    
+    if result:
+        lat, lon, display_name = result
+        return jsonify({
+            'success': True,
+            'location': location,
+            'display_name': display_name,
+            'lat': lat,
+            'lon': lon
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': f"Location '{location}' not found"
+        }), 404
+
+
 @app.route('/api/surf/forecast')
 def api_surf_forecast():
     """Get surf forecast for a location."""
@@ -1019,6 +1144,9 @@ def api_surf_forecast():
     # Generate wind summary
     wind_summary = generate_wind_summary(hourly)
     
+    # Generate forecast summary (today's outlook)
+    forecast_summary = generate_forecast_summary(hourly, best_time)
+    
     # Get best time
     best_time = None
     if morning_surf:
@@ -1045,6 +1173,7 @@ def api_surf_forecast():
         'all_hours': all_hours,
         'best_time': best_time,
         'wind_summary': wind_summary,
+        'forecast_summary': forecast_summary,
         'generated': datetime.now().isoformat()
     })
 
