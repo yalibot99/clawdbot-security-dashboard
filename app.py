@@ -829,7 +829,7 @@ def geocode_location(location):
         return None
 
 
-def generate_forecast_summary(hourly_data, best_time):
+def generate_forecast_summary(hourly_data, best_time_data=None):
     """Generate a natural language summary of today's conditions."""
     times = hourly_data.get('time', [])
     wind_speeds = hourly_data.get('wind_speed_10m', [])
